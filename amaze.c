@@ -351,6 +351,7 @@ void sightline(int x0, int y0, int x1, int y1, Chunk *p) {
          blind = true;
       }
 
+#if 0
       if (dx == 0) {
          y += sign(dy);
       }
@@ -358,6 +359,7 @@ void sightline(int x0, int y0, int x1, int y1, Chunk *p) {
          x += sign(dx);
       }
       else {
+#endif
          if (abs(dx) > abs(dy)) {
             // shallow
             x += sign(dx);
@@ -380,8 +382,10 @@ void sightline(int x0, int y0, int x1, int y1, Chunk *p) {
                x = px;
             }
          }
+#if 0
       }
-   } while (x != x1 && y != y1);
+#endif
+   } while (x != x1 || y != y1);
 
    if (blind) {
       p->chunk[y][x] = 0xB7;
