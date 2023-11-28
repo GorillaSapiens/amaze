@@ -73,7 +73,7 @@ struct Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
    unsigned int bx = x / 16;
    unsigned int by = y / 16;
 
-   smrand((bx << 16) | by);
+   smrand(bx * 7 + by * 5);
 
    for (int i = 0; i < 16; i++) {
       for (int j = 0; j < 16; j++) {
@@ -307,6 +307,7 @@ int main(int argc, char **argv) {
       int ny;
 
       clear();
+      printf("%d,%d\n", x, y);
       struct Chunk drawme = draw(x,y);
       for (int j = 0; j < 16; j++) {
          for (int i = 0; i < 16; i++) {
