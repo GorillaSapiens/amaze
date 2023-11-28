@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <termios.h>
+#include <unistd.h>
 
 const char *template[16] = {
    "V***************",
@@ -275,28 +277,81 @@ void clear(void) {
    printf("\033[2J\033[H");
 }
 
+void unbuffer(void) {
+   static struct termios oldt, newt;
+
+   /*tcgetattr gets the parameters of the current terminal
+     STDIN_FILENO will tell tcgetattr that it should write the settings
+     of stdin to oldt*/
+   tcgetattr( STDIN_FILENO, &oldt);
+   /*now the settings will be copied*/
+   newt = oldt;
+
+   /*ICANON normally takes care that one line at a time will be processed
+     that means it will return if it sees a "\n" or an EOF or an EOL*/
+   newt.c_lflag &= ~(ICANON);          
+
+   /*Those new settings will be set to STDIN
+     TCSANOW tells tcsetattr to change attributes immediately. */
+   tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+}
+
 int main(int argc, char **argv) {
    unsigned int x = atoi(argv[1]);
    unsigned int y = atoi(argv[2]);
 
-   clear();
-   struct Chunk drawme = draw(x,y);
-   for (int j = 0; j < 16; j++) {
-      for (int i = 0; i < 16; i++) {
-         if (drawme.chunk[j][i] != '*') {
-            printf("%c", drawme.chunk[j][i]);
-         }
-         else {
-            int index = 0;
-            if (j >  0 && drawme.chunk[j-1][i] == '*') index |= 8; // up
-            if (j < 15 && drawme.chunk[j+1][i] == '*') index |= 4; // down
-            if (i >  0 && drawme.chunk[j][i-1] == '*') index |= 2; // left
-            if (i < 15 && drawme.chunk[j][i+1] == '*') index |= 1; // right
+   unbuffer();
 
-            utf8print(linechars[index]);
-            //printf("%c", drawme.chunk[j][i]);
+   while (1) {
+      int nx;
+      int ny;
+
+      clear();
+      struct Chunk drawme = draw(x,y);
+      for (int j = 0; j < 16; j++) {
+         for (int i = 0; i < 16; i++) {
+            if (drawme.chunk[j][i] != '*') {
+               printf("%c", drawme.chunk[j][i]);
+               if (drawme.chunk[j][i] == '@') {
+                  ny = j;
+                  nx = i;
+               }
+            }
+            else {
+               int index = 0;
+               if (j >  0 && drawme.chunk[j-1][i] == '*') index |= 8; // up
+               if (j < 15 && drawme.chunk[j+1][i] == '*') index |= 4; // down
+               if (i >  0 && drawme.chunk[j][i-1] == '*') index |= 2; // left
+               if (i < 15 && drawme.chunk[j][i+1] == '*') index |= 1; // right
+
+               if (index == 0 && (i == 0 || i == 15)) index |= 3;
+               if (index == 0 && (j == 0 || j == 15)) index |= 12;
+               utf8print(linechars[index]);
+            }
          }
+         printf("\n");
       }
-      printf("\n");
+
+      int dx = 0;
+      int dy = 0;
+
+      int u = getchar();
+      switch(u) {
+         case 'k': dy--; break;
+         case 'j': dy++; break;
+         case 'h': dx--; break;
+         case 'l': dx++; break;
+         case 'y': dy--; dx--; break;
+         case 'u': dy--; dx++; break;
+         case 'b': dy++; dx--; break;
+         case 'n': dy++; dx++; break;
+
+         case 'q': exit(0); break;
+      }
+
+      if (drawme.chunk[ny+dy][nx+dx] == ' ') {
+         x += dx;
+         y += dy;
+      }
    }
 }
