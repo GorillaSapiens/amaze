@@ -3,10 +3,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-void clear(void) {
-   printf("\033[2J\033[H");
-}
-
 const char *template[16] = {
    "V***************",
    "* * * * * * * * ",
@@ -240,15 +236,66 @@ struct Chunk draw(unsigned int x, unsigned int y) {
    }
 }
 
+int linechars[16] = {
+         // udlr
+0x25CB,  // 0000 // a circle
+0x2501,  // 0001
+0x2501,  // 0010
+0x2501,  // 0011
+0x2503,  // 0100
+0x250F,  // 0101
+0x2513,  // 0110
+0x2533,  // 0111
+0x2503,  // 1000
+0x2517,  // 1001
+0x251B,  // 1010
+0x253B,  // 1011
+0x2503,  // 1100
+0x2523,  // 1101
+0x252B,  // 1110
+0x254B,  // 1111
+};
+
+void utf8print(unsigned int x) {
+   if (x <= 0x7F) {
+      printf("%c", x);
+   }
+   else if (x < 0x800) {
+      printf("%c%c", 0xC0 | (x >> 6), 0x80 | (x & 0x3F));
+   }
+   else if (x < 0x10000) {
+      printf("%c%c%c", 0xE0 | (x >> 12), 0x80 | ((x >> 6) & 0x3F), 0x80 | (x & 0x3F));
+   }
+   else {
+      printf("%c%c%c%c", 0xF0 | (x >> 18), 0x80 | ((x >> 12) & 0x3F), 0x80 | ((x >> 6) & 0x3F), 0x80 | (x & 0x3F));
+   }
+}
+
+void clear(void) {
+   printf("\033[2J\033[H");
+}
+
 int main(int argc, char **argv) {
    unsigned int x = atoi(argv[1]);
    unsigned int y = atoi(argv[2]);
 
    clear();
    struct Chunk drawme = draw(x,y);
-   for (int i = 0; i < 16; i++) {
-      for (int j = 0; j < 16; j++) {
-         printf("%c", drawme.chunk[i][j]);
+   for (int j = 0; j < 16; j++) {
+      for (int i = 0; i < 16; i++) {
+         if (drawme.chunk[j][i] != '*') {
+            printf("%c", drawme.chunk[j][i]);
+         }
+         else {
+            int index = 0;
+            if (j >  0 && drawme.chunk[j-1][i] == '*') index |= 8; // up
+            if (j < 15 && drawme.chunk[j+1][i] == '*') index |= 4; // down
+            if (i >  0 && drawme.chunk[j][i-1] == '*') index |= 2; // left
+            if (i < 15 && drawme.chunk[j][i+1] == '*') index |= 1; // right
+
+            utf8print(linechars[index]);
+            //printf("%c", drawme.chunk[j][i]);
+         }
       }
       printf("\n");
    }
