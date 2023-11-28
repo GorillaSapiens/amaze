@@ -1,2 +1,2 @@
 amaze: amaze.c
-	gcc amaze.c -o amaze
+	gcc -g amaze.c -o amaze

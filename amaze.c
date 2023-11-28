@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 // in screen help
-const char *help[8] = {
+const char *help[9] = {
    "Procedural maze demo.",
    "",
    "movement:",
@@ -14,6 +14,7 @@ const char *help[8] = {
    "h * l",
    "b j n",
    "",
+   "s toggle sightlines",
    "q to quit",
 };
 
@@ -43,9 +44,9 @@ const char *template[16] = {
 };
 
 // a struct to hold the chunk map
-struct Chunk {
+typedef struct Chunk {
    int chunk[16][17];
-};
+} Chunk;
 
 // to keep things random, we dole out
 // random numbers a bit at a time
@@ -90,8 +91,8 @@ void smrand(int seed) {
 }
 
 // generate a chunk based on x and y position in the maze
-struct Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
-   struct Chunk ret;
+Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
+   Chunk ret;
 
    unsigned int bx = x / 16;
    unsigned int by = y / 16;
@@ -198,10 +199,10 @@ struct Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
 }
 
 // paste together 4 chunks to center on x,y
-struct Chunk four(struct Chunk a, struct Chunk b,
-                  struct Chunk c, struct Chunk d,
+Chunk four(Chunk a, Chunk b,
+                  Chunk c, Chunk d,
                   unsigned int x, unsigned int y) {
-   struct Chunk ret;
+   Chunk ret;
 
    for (int j = 0; j < 16; j++) {
       int dy = y - 8 + j;
@@ -235,32 +236,32 @@ struct Chunk four(struct Chunk a, struct Chunk b,
 }
 
 // generate a drawable section based on x and y
-struct Chunk draw(unsigned int x, unsigned int y) {
-   struct Chunk here = do_chunk(x, y, true);
+Chunk draw(unsigned int x, unsigned int y) {
+   Chunk here = do_chunk(x, y, true);
 
    if ((x % 16) <= 7) {
-      struct Chunk left = do_chunk(x - 16, y, false);
+      Chunk left = do_chunk(x - 16, y, false);
       if ((y % 16) <= 7) {
-         struct Chunk up = do_chunk(x, y - 16, false);
-         struct Chunk upleft = do_chunk(x - 16, y - 16, false);
+         Chunk up = do_chunk(x, y - 16, false);
+         Chunk upleft = do_chunk(x - 16, y - 16, false);
          return four(upleft, up, left, here, 16 + (x % 16), 16 + (y % 16));
       }
       else { // (y % 16) >= 8
-         struct Chunk down = do_chunk(x, y + 16, false);
-         struct Chunk downleft = do_chunk(x - 16, y + 16, false);
+         Chunk down = do_chunk(x, y + 16, false);
+         Chunk downleft = do_chunk(x - 16, y + 16, false);
          return four(left, here, downleft, down, 16 + (x % 16), (y % 16));
       }
    }
    else { // (x % 16) >= 8
-      struct Chunk right = do_chunk(x + 16, y, false);
+      Chunk right = do_chunk(x + 16, y, false);
       if ((y % 16) <= 7) {
-         struct Chunk up = do_chunk(x, y - 16, false);
-         struct Chunk upright = do_chunk(x + 16, y - 16, false);
+         Chunk up = do_chunk(x, y - 16, false);
+         Chunk upright = do_chunk(x + 16, y - 16, false);
          return four(up, upright, here, right, (x % 16), 16 + (y % 16));
       }
       else { // (y % 16) >= 8
-         struct Chunk down = do_chunk(x, y + 16, false);
-         struct Chunk downright = do_chunk(x + 16, y + 16, false);
+         Chunk down = do_chunk(x, y + 16, false);
+         Chunk downright = do_chunk(x + 16, y + 16, false);
          return four(here, right, down, downright, (x % 16), (y % 16));
       }
    }
@@ -328,8 +329,108 @@ void unbuffer(void) {
    tcsetattr( STDIN_FILENO, TCSANOW, &newt);
 }
 
+static inline int sign(int x) {
+   return (x > 0) - (x < 0);
+}
+
+void sightline(int x0, int y0, int x1, int y1, Chunk *p) {
+   bool blind = false;
+
+   int ox = x0;
+   int oy = y0;
+   int dx = x1 - x0;
+   int dy = y1 - y0;
+   int y = y0;
+   int x = x0;
+
+   do {
+      if (blind) {
+         p->chunk[y][x] = 0xB7;
+      }
+      else if (p->chunk[y][x] != ' ' && p->chunk[y][x] != '@') {
+         blind = true;
+      }
+
+      if (dx == 0) {
+         y += sign(dy);
+      }
+      else if (dy == 0) {
+         x += sign(dx);
+      }
+      else {
+         if (abs(dx) > abs(dy)) {
+            // shallow
+            x += sign(dx);
+            int py = y + sign(dy);
+            // which is better, x,y or x,ty
+            // (y-y0)/(x-x0) =(y1-y0)/(x1-x0)
+            // y = y0 + (x-x0) * (y1-y0)/(x1-x0)
+            double ty = y0 + (x - x0) * dy / dx;
+            if (abs(py - ty) < abs(y - ty)) {
+               y = py;
+            }
+         }
+         else {
+            // steep
+            y += sign(dy);
+            int px = x + sign(dx);
+            // which is better, x,y or x,ty
+            double tx = x0 + (y - y0) * dx / dy;
+            if (abs(px - tx) < abs(x - tx)) {
+               x = px;
+            }
+         }
+      }
+   } while (x != x1 && y != y1);
+
+   if (blind) {
+      p->chunk[y][x] = 0xB7;
+   }
+}
+
+Chunk sight(Chunk in) {
+   for (int y = 0; y < 16; y++) {
+      for (int x = 0; x < 16; x++) {
+         if (in.chunk[y][x] == '@') {
+            for (int edge = 0; edge < 16; edge++) {
+               sightline(x, y, 0, edge, &in); // left
+               sightline(x, y, 15, edge, &in); // right
+               sightline(x, y, edge, 0, &in); // up
+               sightline(x, y, edge, 15, &in); // down
+            }
+         }
+      }
+   }
+   return in;
+}
+
+Chunk wallify(Chunk c) {
+   Chunk ret;
+   for (int j = 0; j < 16; j++) {
+      for (int i = 0; i < 16; i++) {
+         if (c.chunk[j][i] != '*') {
+            ret.chunk[j][i] = c.chunk[j][i];
+         }
+         else {
+            int index = 0;
+            if (j >  0 && c.chunk[j-1][i] == '*') index |= 8; // up
+            if (j < 15 && c.chunk[j+1][i] == '*') index |= 4; // down
+            if (i >  0 && c.chunk[j][i-1] == '*') index |= 2; // left
+            if (i < 15 && c.chunk[j][i+1] == '*') index |= 1; // right
+
+            if (index == 0 && (i == 0 || i == 15)) index |= 3;
+            if (index == 0 && (j == 0 || j == 15)) index |= 12;
+            ret.chunk[j][i] = linechars[index];
+         }
+      }
+   }
+
+   return ret;
+}
+
 // our entry point
 int main(int argc, char **argv) {
+   bool see = false;
    unsigned int x = argc > 1 ? atoi(argv[1]) : 1;
    unsigned int y = argc > 2 ? atoi(argv[2]) : 1;
 
@@ -341,32 +442,27 @@ int main(int argc, char **argv) {
 
       clear();
       printf("%d,%d\n", x, y);
-      struct Chunk drawme = draw(x,y);
+
+      Chunk drawme = wallify(draw(x,y));
+
+      if (see) {
+         drawme = sight(drawme);
+      }
+
       for (int j = 0; j < 16; j++) {
          for (int i = 0; i < 16; i++) {
-            if (drawme.chunk[j][i] != '*') {
-               printf("%c", drawme.chunk[j][i]);
-               if (drawme.chunk[j][i] == '@') {
-                  ny = j;
-                  nx = i;
-               }
+            if (drawme.chunk[j][i] == '@') {
+               nx = i;
+               ny = j;
             }
-            else {
-               int index = 0;
-               if (j >  0 && drawme.chunk[j-1][i] == '*') index |= 8; // up
-               if (j < 15 && drawme.chunk[j+1][i] == '*') index |= 4; // down
-               if (i >  0 && drawme.chunk[j][i-1] == '*') index |= 2; // left
-               if (i < 15 && drawme.chunk[j][i+1] == '*') index |= 1; // right
-
-               if (index == 0 && (i == 0 || i == 15)) index |= 3;
-               if (index == 0 && (j == 0 || j == 15)) index |= 12;
-               utf8print(linechars[index]);
-            }
+            utf8print(drawme.chunk[j][i]);
          }
-         if (j < 8) {
-            printf("   %s", help[j]);
+         if (j < sizeof(help) / sizeof(help[0])) {
+            printf("   %s\n", help[j]);
          }
-         printf("\n");
+         else {
+            printf("\n");
+         }
       }
 
       int dx = 0;
@@ -382,6 +478,7 @@ int main(int argc, char **argv) {
          case 'u': dy--; dx++; break;
          case 'b': dy++; dx--; break;
          case 'n': dy++; dx++; break;
+         case 's': see = !see; break;
 
          case 'q': exit(0); break;
       }
