@@ -5,6 +5,7 @@
 #include <termios.h>
 #include <unistd.h>
 
+// in screen help
 const char *help[8] = {
    "Procedural maze demo.",
    "",
@@ -16,6 +17,8 @@ const char *help[8] = {
    "q to quit",
 };
 
+// maze is generated in 16x16 chunks
+// this is the chunk template
 const char *template[16] = {
    "V***************",
    "* * * * * * * * ",
@@ -35,10 +38,13 @@ const char *template[16] = {
    "* * * * * * * * "
 };
 
+// a struct to hold the chunk map
 struct Chunk {
    int chunk[16][17];
 };
 
+// to keep things random, we dole out
+// random numbers a bit at a time
 int mrand_bits;
 long mrand_data;
 int mrand(int x) {
@@ -72,12 +78,14 @@ int mrand(int x) {
    return ret;
 }
 
+// call this to seed the random number generator
 void smrand(int seed) {
    mrand_bits = 0;
    mrand_data = 0;
    srand(seed);
 }
 
+// generate a chunk based on x and y position in the maze
 struct Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
    struct Chunk ret;
 
@@ -182,6 +190,7 @@ struct Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
    return ret;
 }
 
+// paste together 4 chunks to center on x,y
 struct Chunk four(struct Chunk a, struct Chunk b,
                   struct Chunk c, struct Chunk d,
                   unsigned int x, unsigned int y) {
@@ -218,6 +227,7 @@ struct Chunk four(struct Chunk a, struct Chunk b,
    return ret;
 }
 
+// generate a drawable section based on x and y
 struct Chunk draw(unsigned int x, unsigned int y) {
    struct Chunk here = do_chunk(x, y, true);
 
@@ -249,6 +259,7 @@ struct Chunk draw(unsigned int x, unsigned int y) {
    }
 }
 
+// line drawing characters
 int linechars[16] = {
          // udlr
 0x25CB,  // 0000 // a circle
@@ -269,6 +280,7 @@ int linechars[16] = {
 0x254B,  // 1111
 };
 
+// print a utf8 character
 void utf8print(unsigned int x) {
    if (x <= 0x7F) {
       printf("%c", x);
@@ -284,10 +296,12 @@ void utf8print(unsigned int x) {
    }
 }
 
+// clear the screen
 void clear(void) {
    printf("\033[2J\033[H");
 }
 
+// set stdin as unbuffered
 void unbuffer(void) {
    static struct termios oldt, newt;
 
@@ -307,6 +321,7 @@ void unbuffer(void) {
    tcsetattr( STDIN_FILENO, TCSANOW, &newt);
 }
 
+// our entry point
 int main(int argc, char **argv) {
    unsigned int x = argc > 1 ? atoi(argv[1]) : 1;
    unsigned int y = argc > 2 ? atoi(argv[2]) : 1;
