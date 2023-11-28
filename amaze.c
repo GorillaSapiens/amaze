@@ -5,6 +5,17 @@
 #include <termios.h>
 #include <unistd.h>
 
+const char *help[8] = {
+   "Procedural maze demo.",
+   "",
+   "movement:",
+   "y k u",
+   "h * l",
+   "b j n",
+   "",
+   "q to quit",
+};
+
 const char *template[16] = {
    "V***************",
    "* * * * * * * * ",
@@ -297,8 +308,8 @@ void unbuffer(void) {
 }
 
 int main(int argc, char **argv) {
-   unsigned int x = atoi(argv[1]);
-   unsigned int y = atoi(argv[2]);
+   unsigned int x = argc > 1 ? atoi(argv[1]) : 1;
+   unsigned int y = argc > 2 ? atoi(argv[2]) : 1;
 
    unbuffer();
 
@@ -329,6 +340,9 @@ int main(int argc, char **argv) {
                if (index == 0 && (j == 0 || j == 15)) index |= 12;
                utf8print(linechars[index]);
             }
+         }
+         if (j < 8) {
+            printf("   %s", help[j]);
          }
          printf("\n");
       }
