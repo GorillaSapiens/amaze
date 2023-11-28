@@ -18,6 +18,10 @@ const char *help[8] = {
 };
 
 // maze is generated in 16x16 chunks
+
+// this algorithm is a variation of the "Tessellation algorithm" at
+// https://en.wikipedia.org/wiki/Maze_generation_algorithm
+
 // this is the chunk template
 const char *template[16] = {
    "V***************",
