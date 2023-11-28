@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <termios.h>
 #include <unistd.h>
+#include <math.h>
+#include <float.h>
 
 // in screen help
 const char *help[9] = {
@@ -333,78 +335,99 @@ static inline int sign(int x) {
    return (x > 0) - (x < 0);
 }
 
-void sightline(int x0, int y0, int x1, int y1, Chunk *p) {
-   bool blind = false;
+typedef struct Obst {
+   int x;
+   int y;
+   int dy;
+   int dx;
+   int d2;
+   bool seen;
+   double theta;
+} Obst;
 
-   int ox = x0;
-   int oy = y0;
-   int dx = x1 - x0;
-   int dy = y1 - y0;
-   int y = y0;
-   int x = x0;
-
-   do {
-      if (blind) {
-         p->chunk[y][x] = 0xB7;
-      }
-      else if (p->chunk[y][x] != ' ' && p->chunk[y][x] != '@') {
-         blind = true;
-      }
-
-#if 0
-      if (dx == 0) {
-         y += sign(dy);
-      }
-      else if (dy == 0) {
-         x += sign(dx);
-      }
-      else {
-#endif
-         if (abs(dx) > abs(dy)) {
-            // shallow
-            x += sign(dx);
-            int py = y + sign(dy);
-            // which is better, x,y or x,ty
-            // (y-y0)/(x-x0) =(y1-y0)/(x1-x0)
-            // y = y0 + (x-x0) * (y1-y0)/(x1-x0)
-            double ty = y0 + (x - x0) * dy / dx;
-            if (abs(py - ty) < abs(y - ty)) {
-               y = py;
-            }
-         }
-         else {
-            // steep
-            y += sign(dy);
-            int px = x + sign(dx);
-            // which is better, x,y or x,ty
-            double tx = x0 + (y - y0) * dx / dy;
-            if (abs(px - tx) < abs(x - tx)) {
-               x = px;
-            }
-         }
-#if 0
-      }
-#endif
-   } while (x != x1 || y != y1);
-
-   if (blind) {
-      p->chunk[y][x] = 0xB7;
-   }
-}
+#define ORDERED(a,b,c) ((a) <= (b) && (b) <= (c))
 
 Chunk sight(Chunk in) {
+   Obst obst[256];
+   int spot = 0;
+
+   int atx, aty;
+
+   // find @
    for (int y = 0; y < 16; y++) {
       for (int x = 0; x < 16; x++) {
          if (in.chunk[y][x] == '@') {
-            for (int edge = 0; edge < 16; edge++) {
-               sightline(x, y, 0, edge, &in); // left
-               sightline(x, y, 15, edge, &in); // right
-               sightline(x, y, edge, 0, &in); // up
-               sightline(x, y, edge, 15, &in); // down
+            atx = x;
+            aty = y;
+         }
+      }
+   }
+
+   // populate obst
+   for (int y = 0; y < 16; y++) {
+      for (int x = 0; x < 16; x++) {
+         if (in.chunk[y][x] != ' ' && in.chunk[y][x] != '@') {
+            obst[spot].x = x;
+            obst[spot].y = y;
+            int dx = obst[spot].dx = x - atx;
+            int dy = obst[spot].dy = y - aty;
+            obst[spot].theta = atan2(dy, dx) + M_PI; // 0 to 2*pi
+            obst[spot].d2 = dx * dx + dy * dy;
+            obst[spot].seen = true;
+            spot++;
+         }
+      }
+   }
+
+   // sort obst
+   for (int i = 0; i < spot; i++) {
+      for (int j = i + 1; j < spot; j++) {
+         if (obst[j].d2 < obst[i].d2) {
+            Obst tmp;
+            memcpy(&tmp, obst + i, sizeof(tmp));
+            memcpy(obst + i, obst + j, sizeof(tmp));
+            memcpy(obst + j, &tmp, sizeof(tmp));
+         }
+      }
+   }
+
+   // find adjacent pairs of obst
+   for (int i = 0; i < spot; i++) {
+      for (int j = i + 1; j < spot; j++) {
+         int dx = obst[i].x - obst[j].x;
+         int dy = obst[i].y - obst[j].y;
+         int d2 = dx * dx + dy * dy;
+         if (d2 <= 1) {
+            // i and j are adjacent
+            for (int k = 0; k < spot; k++) {
+               if (k != i && k != j &&
+                   obst[k].d2 >= obst[i].d2 &&
+                   obst[k].d2 >= obst[j].d2) {
+                  double ij = fabs(obst[i].theta - obst[j].theta);
+                  if (ij > M_PI) { ij = 2.0 * M_PI - ij; }
+                  double ik = fabs(obst[i].theta - obst[k].theta);
+                  if (ik > M_PI) { ik = 2.0 * M_PI - ik; }
+                  double jk = fabs(obst[j].theta - obst[k].theta);
+                  if (jk > M_PI) { jk = 2.0 * M_PI - jk; }
+
+                  ik += jk;
+
+                  if (!((ik - ij) > DBL_EPSILON)) {
+#if 0
+printf("%d,%d :: %d,%d,%d obscured by %d,%d,%d and %d,%d,%d\n",
+atx, aty,
+obst[k].x, obst[k].y, obst[k].d2,
+obst[i].x, obst[i].y, obst[i].d2,
+obst[j].x, obst[j].y, obst[j].d2);
+#endif
+                     in.chunk[obst[k].y][obst[k].x] = ' ';
+                  }
+               }
             }
          }
       }
    }
+
    return in;
 }
 
