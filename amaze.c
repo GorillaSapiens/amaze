@@ -3,6 +3,10 @@
 #include <string.h>
 #include <stdbool.h>
 
+void clear(void) {
+   printf("\033[2J\033[H");
+}
+
 const char *template[16] = {
    "V***************",
    "* * * * * * * * ",
@@ -23,7 +27,7 @@ const char *template[16] = {
 };
 
 struct Chunk {
-   char chunk[16][17];
+   int chunk[16][17];
 };
 
 int mrand_bits;
@@ -74,7 +78,10 @@ struct Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
    smrand((bx << 16) | by);
 
    for (int i = 0; i < 16; i++) {
-      strcpy(ret.chunk[i], template[i]);
+      for (int j = 0; j < 16; j++) {
+         ret.chunk[i][j] = template[i][j];
+      }
+      ret.chunk[i][16] = 0;
    }
 
    for (int u = 0; u < 16; u++) {
@@ -237,8 +244,12 @@ int main(int argc, char **argv) {
    unsigned int x = atoi(argv[1]);
    unsigned int y = atoi(argv[2]);
 
+   clear();
    struct Chunk drawme = draw(x,y);
    for (int i = 0; i < 16; i++) {
-      printf("%s\n", drawme.chunk[i]);
+      for (int j = 0; j < 16; j++) {
+         printf("%c", drawme.chunk[i][j]);
+      }
+      printf("\n");
    }
 }
