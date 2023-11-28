@@ -96,6 +96,9 @@ struct Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
    unsigned int bx = x / 16;
    unsigned int by = y / 16;
 
+   // here's the secret sauce
+   // seed the random number generator based on location
+   // throw some prime numbers in there too why don'tcha
    smrand(bx * 7 + by * 5);
 
    for (int i = 0; i < 16; i++) {
