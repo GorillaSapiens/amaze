@@ -122,21 +122,37 @@ Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
                      ret.chunk[v-1][u] = ' ';
                      ret.chunk[v+1][u] = ' ';
                      ret.chunk[v][u+1] = ' ';
+                     if (mrand(4) == 0) {
+                        ret.chunk[v][u-1] = ' ';
+                        ret.chunk[v][u] = ' ';
+                     }
                      break;
                   case 1:
                      ret.chunk[v-1][u] = ' ';
                      ret.chunk[v+1][u] = ' ';
                      ret.chunk[v][u-1] = ' ';
+                     if (mrand(4) == 0) {
+                        ret.chunk[v][u+1] = ' ';
+                        ret.chunk[v][u] = ' ';
+                     }
                      break;
                   case 2:
                      ret.chunk[v][u+1] = ' ';
                      ret.chunk[v][u-1] = ' ';
                      ret.chunk[v-1][u] = ' ';
+                     if (mrand(4) == 0) {
+                        ret.chunk[v+1][u] = ' ';
+                        ret.chunk[v][u] = ' ';
+                     }
                      break;
                   case 3:
                      ret.chunk[v][u+1] = ' ';
                      ret.chunk[v][u-1] = ' ';
                      ret.chunk[v+1][u] = ' ';
+                     if (mrand(4) == 0) {
+                        ret.chunk[v-1][u] = ' ';
+                        ret.chunk[v][u] = ' ';
+                     }
                      break;
                }
             }
@@ -192,7 +208,9 @@ Chunk do_chunk(unsigned int x, unsigned int y, bool at) {
                ret.chunk[v][u+(1+2*mrand(8))] = ' ';
                ret.chunk[v+(1+2*mrand(8))][u] = ' ';
             }
-            ret.chunk[v][u] = '*';
+            if (ret.chunk[v][u] != ' ') {
+               ret.chunk[v][u] = '*';
+            }
          }
       }
    }
