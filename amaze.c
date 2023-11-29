@@ -7,6 +7,8 @@
 #include <math.h>
 #include <float.h>
 
+bool see = false;
+
 // in screen help
 const char *help[9] = {
    "Procedural maze demo.",
@@ -338,14 +340,81 @@ static inline int sign(int x) {
 typedef struct Obst {
    int x;
    int y;
-   int dy;
-   int dx;
    int d2;
-   bool seen;
    double theta;
+   bool visited;
+   int hidden;
 } Obst;
 
 #define ORDERED(a,b,c) ((a) <= (b) && (b) <= (c))
+
+void sight_helper(Obst *o, int size, int x, int y) {
+   // update d2 and theta
+   for (int i = 0; i < size; i++) {
+      int dx = o[i].x - x;
+      int dy = o[i].y - y;
+      o[i].visited = false;
+      o[i].d2 = dx * dx + dy * dy;
+      o[i].theta = atan2(dy, dx) + M_PI; // range 0 to 2pi
+   }
+   // sort by d2
+   for (int i = 0; i < size; i++) {
+      for (int j = i + 1; j < size; j++) {
+         if (o[j].d2 < o[i].d2) {
+            Obst tmp;
+            memcpy(&tmp, o + i, sizeof(tmp));
+            memcpy(o + i, o + j, sizeof(tmp));
+            memcpy(o + j, &tmp, sizeof(tmp));
+         }
+      }
+   }
+   // find adjacent pairs of obst
+   for (int i = 0; i < size; i++) {
+      for (int j = i + 1; j < size; j++) {
+         int dx = o[i].x - o[j].x;
+         int dy = o[i].y - o[j].y;
+         int d2 = dx * dx + dy * dy;
+         if (d2 <= 1) {
+            // i and j are adjacent
+            for (int k = 0; k < size; k++) {
+               if (k != i && k != j &&
+                   o[k].d2 >= o[i].d2 &&
+                   o[k].d2 >= o[j].d2) {
+                  double ij = fabs(o[i].theta - o[j].theta);
+                  if (ij > M_PI) { ij = 2.0 * M_PI - ij; }
+                  double ik = fabs(o[i].theta - o[k].theta);
+                  if (ik > M_PI) { ik = 2.0 * M_PI - ik; }
+                  double jk = fabs(o[j].theta - o[k].theta);
+                  if (jk > M_PI) { jk = 2.0 * M_PI - jk; }
+
+#ifdef DEBUG_SIGHT
+//if (o[k].y == 7 && o[k].x == 0) {
+   printf("=== %d(%d,%d)(%g) %d(%d,%d)(%g) %d(%d,%d)(%g)\n",
+   i, o[i].x - x, o[i].y - y, o[i].theta,
+   j, o[j].x - x, o[j].y - y, o[j].theta,
+   k, o[k].x - x, o[k].y - y, o[k].theta);
+   printf("ij=%g ik=%g jk=%g\n", ij, ik, jk);
+//}
+#endif
+                  if (ik <= ij && jk <= ij) {
+                     if (1) { //!o[k].visited) {
+                        o[k].hidden++;
+                        o[k].visited = true;
+                     }
+#ifdef DEBUG_SIGHT
+printf("%d,%d :: %d,%d,%d obscured by %d,%d,%d and %d,%d,%d\n",
+x, y,
+o[k].x, o[k].y, o[k].d2,
+o[i].x, o[i].y, o[i].d2,
+o[j].x, o[j].y, o[j].d2);
+#endif
+                  }
+               }
+            }
+         }
+      }
+   }
+}
 
 Chunk sight(Chunk in) {
    Obst obst[256];
@@ -369,62 +438,34 @@ Chunk sight(Chunk in) {
          if (in.chunk[y][x] != ' ' && in.chunk[y][x] != '@') {
             obst[spot].x = x;
             obst[spot].y = y;
-            int dx = obst[spot].dx = x - atx;
-            int dy = obst[spot].dy = y - aty;
-            obst[spot].theta = atan2(dy, dx) + M_PI; // 0 to 2*pi
-            obst[spot].d2 = dx * dx + dy * dy;
-            obst[spot].seen = true;
+            obst[spot].hidden = 0;
             spot++;
          }
       }
    }
 
-   // sort obst
-   for (int i = 0; i < spot; i++) {
-      for (int j = i + 1; j < spot; j++) {
-         if (obst[j].d2 < obst[i].d2) {
-            Obst tmp;
-            memcpy(&tmp, obst + i, sizeof(tmp));
-            memcpy(obst + i, obst + j, sizeof(tmp));
-            memcpy(obst + j, &tmp, sizeof(tmp));
+#if 0
+   // call the helper hcalls times
+   int hcalls = 0;
+   for (int dy = -1; dy < 2; dy++) {
+      for (int dx = -1; dx < 2; dx++) {
+         if (dx == 0 || dy == 0) {
+            if (in.chunk[aty+dy][atx+dx] == ' ' ||
+                  in.chunk[aty+dy][atx+dx] == '@') {
+               hcalls++;
+               sight_helper(obst, spot, atx + dx, aty + dy);
+            }
          }
       }
    }
-
-   // find adjacent pairs of obst
-   for (int i = 0; i < spot; i++) {
-      for (int j = i + 1; j < spot; j++) {
-         int dx = obst[i].x - obst[j].x;
-         int dy = obst[i].y - obst[j].y;
-         int d2 = dx * dx + dy * dy;
-         if (d2 <= 1) {
-            // i and j are adjacent
-            for (int k = 0; k < spot; k++) {
-               if (k != i && k != j &&
-                   obst[k].d2 >= obst[i].d2 &&
-                   obst[k].d2 >= obst[j].d2) {
-                  double ij = fabs(obst[i].theta - obst[j].theta);
-                  if (ij > M_PI) { ij = 2.0 * M_PI - ij; }
-                  double ik = fabs(obst[i].theta - obst[k].theta);
-                  if (ik > M_PI) { ik = 2.0 * M_PI - ik; }
-                  double jk = fabs(obst[j].theta - obst[k].theta);
-                  if (jk > M_PI) { jk = 2.0 * M_PI - jk; }
-
-                  ik += jk;
-
-                  if (!((ik - ij) > DBL_EPSILON)) {
-#if 0
-printf("%d,%d :: %d,%d,%d obscured by %d,%d,%d and %d,%d,%d\n",
-atx, aty,
-obst[k].x, obst[k].y, obst[k].d2,
-obst[i].x, obst[i].y, obst[i].d2,
-obst[j].x, obst[j].y, obst[j].d2);
+#else
+   sight_helper(obst, spot, atx, aty);
 #endif
-                     in.chunk[obst[k].y][obst[k].x] = ' ';
-                  }
-               }
-            }
-         }
+
+   // erase anything hidden hcalls times
+   for (int i = 0; i < spot; i++) {
+      if (obst[i].hidden) {
+         in.chunk[obst[i].y][obst[i].x] = ' ';
       }
    }
 
@@ -447,6 +488,20 @@ Chunk wallify(Chunk c) {
 
             if (index == 0 && (i == 0 || i == 15)) index |= 3;
             if (index == 0 && (j == 0 || j == 15)) index |= 12;
+
+#if 0
+            if (see) {
+               int mask = 0;
+               // assume @ is 8,8
+               if (j < 8 && (index & 3) == 3) mask |= 8;
+               if (j > 8 && (index & 3) == 3) mask |= 4;
+               if (i < 8 && (index & 12) == 12) mask |= 2;
+               if (i > 8 && (index & 12) == 12) mask |= 1;
+
+               index &= ~mask;
+            }
+#endif
+
             ret.chunk[j][i] = linechars[index];
          }
       }
@@ -455,9 +510,19 @@ Chunk wallify(Chunk c) {
    return ret;
 }
 
+Chunk fixsingles(Chunk a, Chunk b) {
+   for (int y = 0; y < 16; y++) {
+      for (int x = 0; x < 16; x++) {
+         if (a.chunk[y][x] == linechars[0]) {
+            a.chunk[y][x] = b.chunk[y][x];
+         }
+      }
+   }
+   return a;
+}
+
 // our entry point
 int main(int argc, char **argv) {
-   bool see = false;
    unsigned int x = argc > 1 ? atoi(argv[1]) : 1;
    unsigned int y = argc > 2 ? atoi(argv[2]) : 1;
 
@@ -470,11 +535,15 @@ int main(int argc, char **argv) {
       clear();
       printf("%d,%d\n", x, y);
 
-      Chunk drawme = wallify(draw(x,y));
+      Chunk drawme = draw(x,y);
+      Chunk singles = wallify(drawme);
 
       if (see) {
          drawme = sight(drawme);
       }
+
+      drawme = wallify(drawme);
+      drawme = fixsingles(drawme, singles);
 
       for (int j = 0; j < 16; j++) {
          for (int i = 0; i < 16; i++) {
