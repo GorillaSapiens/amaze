@@ -129,6 +129,22 @@ Map do_map(int x, int y) {
       }
    }
 
+   // void around pillars (cosmetic)
+   for (int iy = 0; iy < SIZE; iy++) {
+      for (int ix = 0; ix < SIZE; ix++) {
+         if (ret.str[iy][ix] == '*') {
+            if (ix > 0 && ix < (SIZE-1) && iy > 0 && iy < (SIZE-1)) {
+               if (ret.str[iy-1][ix] == 'X' &&
+                   ret.str[iy+1][ix] == 'X' &&
+                   ret.str[iy][ix-1] == 'X' &&
+                   ret.str[iy][ix+1] == 'X') {
+                  ret.str[iy][ix] = 'X';
+               }
+            }
+         }
+      }
+   }
+
    // place @
    ret.str[SIZE/2][SIZE/2] = '@';
 
