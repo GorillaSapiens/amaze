@@ -7,11 +7,12 @@
 #include <math.h>
 #include <float.h>
 
+bool raw = false;
 bool see = false;
 bool phase = false;
 
 // in screen help
-const char *help[10] = {
+const char *help[11] = {
    "Procedural maze demo.",
    "",
    "movement:",
@@ -21,6 +22,7 @@ const char *help[10] = {
    "",
    "s toggle sightlines",
    "p toggle phase",
+   "r toggle raw",
    "q to quit",
 };
 
@@ -73,7 +75,7 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
          }
       }
 
-      // mark unvisited voids
+      // repair one unvisited void per loop
       for (int iy = 1; !repaired && iy < SIZE - 1; iy++) {
          for (int ix = 1; !repaired && ix < SIZE - 1; ix++) {
             int typ = (offset_x + ix) & 1;
@@ -92,7 +94,7 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
                int tmp = rand();
                if ((tmp & 4) && (iy > 0)) {
                   // space up
-                  if (ret.str[iy-1][ix] != ' ') {
+                  if (ret.str[iy - 1][ix] != ' ') {
                      ret.str[iy - 1][ix] = ' ';
                      repaired = true;
                   }
@@ -105,10 +107,22 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
                   }
                }
             }
+
          }
       }
    }
 
+   for (int iy = 1; iy < SIZE - 1; iy++) {
+      for (int ix = 1; ix < SIZE - 1; ix++) {
+         if (ret.str[iy-1][ix] == ' ' &&
+             ret.str[iy-1][ix] != ' ' &&
+             ret.str[iy+1][ix] != ' ' &&
+             ret.str[iy][ix-1] != ' ' &&
+             ret.str[iy][ix+1] != ' ') {
+            ret.str[iy][ix] = 'X';
+         }
+      }
+   }
    return ret;
 }
 
@@ -168,7 +182,6 @@ Map do_map(int x, int y) {
    }
 
    // force reachability
-   ret = repair_voids(ret, offset_x, offset_y);
    ret = repair_voids(ret, offset_x, offset_y);
 
    // place @
@@ -419,12 +432,14 @@ int main(int argc, char **argv) {
       Map drawme = do_map(x,y);
       Map singles = wallify(drawme);
 
-      if (see) {
-         drawme = sight(drawme);
-      }
+      if (!raw) {
+         if (see) {
+            drawme = sight(drawme);
+         }
 
-      drawme = wallify(drawme);
-      drawme = fixsingles(drawme, singles);
+         drawme = wallify(drawme);
+         drawme = fixsingles(drawme, singles);
+      }
 
       for (int j = 0; j < PORTAL_Y; j++) {
          int y = j + (SIZE - PORTAL_Y) / 2;
@@ -461,8 +476,10 @@ int main(int argc, char **argv) {
          case 'u': dy--; dx++; break;
          case 'b': dy++; dx--; break;
          case 'n': dy++; dx++; break;
+
          case 's': see = !see; break;
          case 'p': phase = !phase; break;
+         case 'r': raw = !raw; break;
 
          case 'q': exit(0); break;
       }
