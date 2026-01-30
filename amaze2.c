@@ -8,9 +8,10 @@
 #include <float.h>
 
 bool see = false;
+bool phase = false;
 
 // in screen help
-const char *help[9] = {
+const char *help[10] = {
    "Procedural maze demo.",
    "",
    "movement:",
@@ -19,6 +20,7 @@ const char *help[9] = {
    "b j n",
    "",
    "s toggle sightlines",
+   "p toggle phase",
    "q to quit",
 };
 
@@ -35,6 +37,80 @@ const char *help[9] = {
 typedef struct Map {
    int str[SIZE][SIZE+1];
 } Map;
+
+Map repair_voids(Map ret, int offset_x, int offset_y) {
+   Map visited;
+
+   memset(&visited, 0, sizeof(visited));
+
+   // populate edges
+   for (int i = 0; i < SIZE; i++) {
+      if (ret.str[0][i] == ' ') visited.str[0][i] = ' ';
+      if (ret.str[i][0] == ' ') visited.str[i][0] = ' ';
+      if (ret.str[SIZE-1][i] == ' ') visited.str[SIZE-1][i] = ' ';
+      if (ret.str[i][SIZE-1] == ' ') visited.str[i][SIZE-1] = ' ';
+   }
+
+   bool repaired = true;
+   while (repaired) {
+      repaired = false;
+
+      bool changed = true;
+      while (changed) {
+         changed = false;
+         for (int iy = 1; iy < SIZE - 1; iy++) {
+            for (int ix = 1; ix < SIZE - 1; ix++) {
+               if (!visited.str[iy][ix] && ret.str[iy][ix] == ' ') {
+                  if (visited.str[iy-1][ix] ||
+                        visited.str[iy+1][ix] ||
+                        visited.str[iy][ix-1] ||
+                        visited.str[iy][ix+1]) {
+                     visited.str[iy][ix] = ' ';
+                     changed = true;
+                  }
+               }
+            }
+         }
+      }
+
+      // mark unvisited voids
+      for (int iy = 1; !repaired && iy < SIZE - 1; iy++) {
+         for (int ix = 1; !repaired && ix < SIZE - 1; ix++) {
+            int typ = (offset_x + ix) & 1;
+            typ <<= 1;
+            typ |= (offset_y + iy) & 1;
+
+            if (typ == 3 && ret.str[iy][ix] == ' ' && !visited.str[iy][ix]) {
+               // we need a repair here!
+
+               int seed = (offset_x + ix) & 0xFFFF;
+               seed <<= 16;
+               seed += (offset_y + iy) & 0xFFFF;
+               seed ^= 0xdeadbeef;
+               srand(seed);
+
+               int tmp = rand();
+               if ((tmp & 4) && (iy > 0)) {
+                  // space up
+                  if (ret.str[iy-1][ix] != ' ') {
+                     ret.str[iy - 1][ix] = ' ';
+                     repaired = true;
+                  }
+               }
+               if ((tmp & 8) && (ix > 0)) {
+                  // space left
+                  if (ret.str[iy][ix - 1] != ' ') {
+                     ret.str[iy][ix - 1] = ' ';
+                     repaired = true;
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   return ret;
+}
 
 // generate a map based on player position
 Map do_map(int x, int y) {
@@ -91,59 +167,9 @@ Map do_map(int x, int y) {
       }
    }
 
-   // fill in voids (cosmetic)
-   for (int iy = 0; iy < SIZE; iy++) {
-      for (int ix = 0; ix < SIZE; ix++) {
-         int typ = (offset_x + ix) & 1;
-         typ <<= 1;
-         typ |= (offset_y + iy) & 1;
-
-         if (typ == 3) {
-            if (ix > 0 && ix < (SIZE - 1) && iy > 0 && iy < (SIZE - 1)) {
-               if (ret.str[iy-1][ix] == '*' &&
-                   ret.str[iy+1][ix] == '*' &&
-                   ret.str[iy][ix-1] == '*' &&
-                   ret.str[iy][ix+1] == '*') {
-                  ret.str[iy][ix] = 'X';
-               }
-            }
-         }
-      }
-   }
-
-   // combine voids (cosmetic)
-   for (int iy = 0; iy < SIZE; iy++) {
-      for (int ix = 0; ix < SIZE; ix++) {
-         if (ret.str[iy][ix] == 'X') {
-            if (ix >= 2) {
-               if (ret.str[iy][ix - 2] == 'X') {
-                  ret.str[iy][ix - 1] = 'X';
-               }
-            }
-            if (iy >= 2) {
-               if (ret.str[iy - 2][ix] == 'X') {
-                  ret.str[iy - 1][ix] = 'X';
-               }
-            }
-         }
-      }
-   }
-
-   // void around pillars (cosmetic)
-   for (int iy = 0; iy < SIZE; iy++) {
-      for (int ix = 0; ix < SIZE; ix++) {
-         if (ret.str[iy][ix] == '*') {
-            if (ix > 0 && ix < (SIZE-1) && iy > 0 && iy < (SIZE-1)) {
-               if (ret.str[iy-1][ix] == 'X' &&
-                   ret.str[iy+1][ix] == 'X' &&
-                   ret.str[iy][ix-1] == 'X' &&
-                   ret.str[iy][ix+1] == 'X') {
-                  ret.str[iy][ix] = 'X';
-               }
-            }
-         }
-      }
-   }
+   // force reachability
+   ret = repair_voids(ret, offset_x, offset_y);
+   ret = repair_voids(ret, offset_x, offset_y);
 
    // place @
    ret.str[SIZE/2][SIZE/2] = '@';
@@ -324,23 +350,7 @@ Map sight(Map in) {
       }
    }
 
-#if 0
-   // call the helper hcalls times
-   int hcalls = 0;
-   for (int dy = -1; dy < 2; dy++) {
-      for (int dx = -1; dx < 2; dx++) {
-         if (dx == 0 || dy == 0) {
-            if (in.str[aty+dy][atx+dx] == ' ' ||
-                  in.str[aty+dy][atx+dx] == '@') {
-               hcalls++;
-               sight_helper(obst, spot, atx + dx, aty + dy);
-            }
-         }
-      }
-   }
-#else
    sight_helper(obst, spot, atx, aty);
-#endif
 
    // erase anything hidden hcalls times
    for (int i = 0; i < spot; i++) {
@@ -368,19 +378,6 @@ Map wallify(Map c) {
 
             if (index == 0 && (i == 0 || i == (SIZE-1))) index |= 3;
             if (index == 0 && (j == 0 || j == (SIZE-1))) index |= 12;
-
-#if 0
-            if (see) {
-               int mask = 0;
-               // assume @ is 8,8
-               if (j < 8 && (index & 3) == 3) mask |= 8;
-               if (j > 8 && (index & 3) == 3) mask |= 4;
-               if (i < 8 && (index & 12) == 12) mask |= 2;
-               if (i > 8 && (index & 12) == 12) mask |= 1;
-
-               index &= ~mask;
-            }
-#endif
 
             ret.str[j][i] = linechars[index];
          }
@@ -437,6 +434,9 @@ int main(int argc, char **argv) {
             if (drawme.str[y][x] == '@') {
                nx = x;
                ny = y;
+               if (phase) {
+                  drawme.str[y][x] = 'X';
+               }
             }
             utf8print(drawme.str[y][x]);
          }
@@ -462,11 +462,12 @@ int main(int argc, char **argv) {
          case 'b': dy++; dx--; break;
          case 'n': dy++; dx++; break;
          case 's': see = !see; break;
+         case 'p': phase = !phase; break;
 
          case 'q': exit(0); break;
       }
 
-      if (drawme.str[ny+dy][nx+dx] == ' ') {
+      if (drawme.str[ny+dy][nx+dx] == ' ' || phase) {
          x += dx;
          y += dy;
       }
