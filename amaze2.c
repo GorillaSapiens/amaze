@@ -1,0 +1,458 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <termios.h>
+#include <unistd.h>
+#include <math.h>
+#include <float.h>
+
+bool see = false;
+
+// in screen help
+const char *help[9] = {
+   "Procedural maze demo.",
+   "",
+   "movement:",
+   "y k u",
+   "h * l",
+   "b j n",
+   "",
+   "s toggle sightlines",
+   "q to quit",
+};
+
+// based on Telengard
+
+// we compute a slightly larger map to avoid artifacts
+// at view portal edges
+
+#define SIZE 80     // size of computed map
+#define PORTAL_X 64 // player visibility into map
+#define PORTAL_Y 20 // player visibility into map
+
+// a struct to hold the map
+typedef struct Map {
+   int str[SIZE][SIZE+1];
+} Map;
+
+// generate a map based on player position
+Map do_map(int x, int y) {
+   Map ret;
+   int offset_x = x - SIZE/2;
+   int offset_y = y - SIZE/2;
+
+   // tabla rasa
+   for (int iy = 0; iy < SIZE; iy++) {
+      for (int ix = 0; ix < SIZE; ix++) {
+         ret.str[iy][ix] = ' ';
+      }
+      ret.str[iy][SIZE] = 0;
+   }
+
+   // create framework and walls
+   for (int iy = 0; iy < SIZE; iy++) {
+      for (int ix = 0; ix < SIZE; ix++) {
+         int typ = (offset_x + ix) & 1;
+         typ <<= 1;
+         typ |= (offset_y + iy) & 1;
+
+         switch (typ) {
+            case 0:
+               // corner always filled
+               ret.str[iy][ix] = '*';
+               break;
+            case 1:
+            case 2:
+               // possible wall or open
+               ret.str[iy][ix] = ' ';
+               break;
+            case 3:
+               {
+                  // Double, double toil and trouble...
+                  int seed = (offset_x + ix) & 0xFFFF;
+                  seed <<= 16;
+                  seed += (offset_y + iy) & 0xFFFF;
+                  seed ^= 0xdeadbeef;
+                  srand(seed);
+
+                  int tmp = rand();
+                  if ((tmp & 1) && (iy > 0)) {
+                     // wall up
+                     ret.str[iy - 1][ix] = '*';
+                  }
+                  if ((tmp & 2) && (ix > 0)) {
+                     // wall left
+                     ret.str[iy][ix - 1] = '*';
+                  }
+               }
+               break;
+         }
+      }
+   }
+
+   // fill in voids (cosmetic)
+   for (int iy = 0; iy < SIZE; iy++) {
+      for (int ix = 0; ix < SIZE; ix++) {
+         int typ = (offset_x + ix) & 1;
+         typ <<= 1;
+         typ |= (offset_y + iy) & 1;
+
+         if (typ == 3) {
+            if (ix > 0 && ix < (SIZE - 1) && iy > 0 && iy < (SIZE - 1)) {
+               if (ret.str[iy-1][ix] == '*' &&
+                   ret.str[iy+1][ix] == '*' &&
+                   ret.str[iy][ix-1] == '*' &&
+                   ret.str[iy][ix+1] == '*') {
+                  ret.str[iy][ix] = 'X';
+               }
+            }
+         }
+      }
+   }
+
+   // combine voids (cosmetic)
+   for (int iy = 0; iy < SIZE; iy++) {
+      for (int ix = 0; ix < SIZE; ix++) {
+         if (ret.str[iy][ix] == 'X') {
+            if (ix >= 2) {
+               if (ret.str[iy][ix - 2] == 'X') {
+                  ret.str[iy][ix - 1] = 'X';
+               }
+            }
+            if (iy >= 2) {
+               if (ret.str[iy - 2][ix] == 'X') {
+                  ret.str[iy - 1][ix] = 'X';
+               }
+            }
+         }
+      }
+   }
+
+   // place @
+   ret.str[SIZE/2][SIZE/2] = '@';
+
+   return ret;
+}
+
+// line drawing characters
+int linechars[16] = {
+         // udlr
+0x25CB,  // 0000 // a circle
+0x2501,  // 0001
+0x2501,  // 0010
+0x2501,  // 0011
+0x2503,  // 0100
+0x250F,  // 0101
+0x2513,  // 0110
+0x2533,  // 0111
+0x2503,  // 1000
+0x2517,  // 1001
+0x251B,  // 1010
+0x253B,  // 1011
+0x2503,  // 1100
+0x2523,  // 1101
+0x252B,  // 1110
+0x254B,  // 1111
+};
+
+// print a utf8 character
+void utf8print(unsigned int x) {
+   if (x <= 0x7F) {
+      printf("%c", x);
+   }
+   else if (x < 0x800) {
+      printf("%c%c", 0xC0 | (x >> 6), 0x80 | (x & 0x3F));
+   }
+   else if (x < 0x10000) {
+      printf("%c%c%c", 0xE0 | (x >> 12), 0x80 | ((x >> 6) & 0x3F), 0x80 | (x & 0x3F));
+   }
+   else {
+      printf("%c%c%c%c", 0xF0 | (x >> 18), 0x80 | ((x >> 12) & 0x3F), 0x80 | ((x >> 6) & 0x3F), 0x80 | (x & 0x3F));
+   }
+}
+
+// clear the screen
+void clear(void) {
+   printf("\033[2J\033[H");
+}
+
+// set stdin as unbuffered
+void unbuffer(void) {
+   static struct termios oldt, newt;
+
+   /*tcgetattr gets the parameters of the current terminal
+     STDIN_FILENO will tell tcgetattr that it should write the settings
+     of stdin to oldt*/
+   tcgetattr( STDIN_FILENO, &oldt);
+   /*now the settings will be copied*/
+   newt = oldt;
+
+   /*ICANON normally takes care that one line at a time will be processed
+     that means it will return if it sees a "\n" or an EOF or an EOL*/
+   newt.c_lflag &= ~(ICANON);
+
+   /*Those new settings will be set to STDIN
+     TCSANOW tells tcsetattr to change attributes immediately. */
+   tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+}
+
+static inline int sign(int x) {
+   return (x > 0) - (x < 0);
+}
+
+typedef struct Obst {
+   int x;
+   int y;
+   int d2;
+   double theta;
+   bool visited;
+   int hidden;
+} Obst;
+
+#define ORDERED(a,b,c) ((a) <= (b) && (b) <= (c))
+
+void sight_helper(Obst *o, int size, int x, int y) {
+   // update d2 and theta
+   for (int i = 0; i < size; i++) {
+      int dx = o[i].x - x;
+      int dy = o[i].y - y;
+      o[i].visited = false;
+      o[i].d2 = dx * dx + dy * dy;
+      o[i].theta = atan2(dy, dx) + M_PI; // range 0 to 2pi
+   }
+   // sort by d2
+   for (int i = 0; i < size; i++) {
+      for (int j = i + 1; j < size; j++) {
+         if (o[j].d2 < o[i].d2) {
+            Obst tmp;
+            memcpy(&tmp, o + i, sizeof(tmp));
+            memcpy(o + i, o + j, sizeof(tmp));
+            memcpy(o + j, &tmp, sizeof(tmp));
+         }
+      }
+   }
+   // find adjacent pairs of obst
+   for (int i = 0; i < size; i++) {
+      for (int j = i + 1; j < size; j++) {
+         int dx = o[i].x - o[j].x;
+         int dy = o[i].y - o[j].y;
+         int d2 = dx * dx + dy * dy;
+         if (d2 <= 1) {
+            // i and j are adjacent
+            for (int k = 0; k < size; k++) {
+               if (k != i && k != j &&
+                   o[k].d2 >= o[i].d2 &&
+                   o[k].d2 >= o[j].d2) {
+                  double ij = fabs(o[i].theta - o[j].theta);
+                  if (ij > M_PI) { ij = 2.0 * M_PI - ij; }
+                  double ik = fabs(o[i].theta - o[k].theta);
+                  if (ik > M_PI) { ik = 2.0 * M_PI - ik; }
+                  double jk = fabs(o[j].theta - o[k].theta);
+                  if (jk > M_PI) { jk = 2.0 * M_PI - jk; }
+
+#ifdef DEBUG_SIGHT
+//if (o[k].y == 7 && o[k].x == 0) {
+   printf("=== %d(%d,%d)(%g) %d(%d,%d)(%g) %d(%d,%d)(%g)\n",
+   i, o[i].x - x, o[i].y - y, o[i].theta,
+   j, o[j].x - x, o[j].y - y, o[j].theta,
+   k, o[k].x - x, o[k].y - y, o[k].theta);
+   printf("ij=%g ik=%g jk=%g\n", ij, ik, jk);
+//}
+#endif
+                  if (ik <= ij && jk <= ij) {
+                     if (1) { //!o[k].visited) {
+                        o[k].hidden++;
+                        o[k].visited = true;
+                     }
+#ifdef DEBUG_SIGHT
+printf("%d,%d :: %d,%d,%d obscured by %d,%d,%d and %d,%d,%d\n",
+x, y,
+o[k].x, o[k].y, o[k].d2,
+o[i].x, o[i].y, o[i].d2,
+o[j].x, o[j].y, o[j].d2);
+#endif
+                  }
+               }
+            }
+         }
+      }
+   }
+}
+
+Map sight(Map in) {
+   Obst obst[SIZE*SIZE];
+   int spot = 0;
+
+   int atx, aty;
+
+   // find @
+   for (int y = 0; y < SIZE; y++) {
+      for (int x = 0; x < SIZE; x++) {
+         if (in.str[y][x] == '@') {
+            atx = x;
+            aty = y;
+         }
+      }
+   }
+
+   // populate obst
+   for (int y = 0; y < SIZE; y++) {
+      for (int x = 0; x < SIZE; x++) {
+         if (in.str[y][x] != ' ' && in.str[y][x] != '@') {
+            obst[spot].x = x;
+            obst[spot].y = y;
+            obst[spot].hidden = 0;
+            spot++;
+         }
+      }
+   }
+
+#if 0
+   // call the helper hcalls times
+   int hcalls = 0;
+   for (int dy = -1; dy < 2; dy++) {
+      for (int dx = -1; dx < 2; dx++) {
+         if (dx == 0 || dy == 0) {
+            if (in.str[aty+dy][atx+dx] == ' ' ||
+                  in.str[aty+dy][atx+dx] == '@') {
+               hcalls++;
+               sight_helper(obst, spot, atx + dx, aty + dy);
+            }
+         }
+      }
+   }
+#else
+   sight_helper(obst, spot, atx, aty);
+#endif
+
+   // erase anything hidden hcalls times
+   for (int i = 0; i < spot; i++) {
+      if (obst[i].hidden) {
+         in.str[obst[i].y][obst[i].x] = ' ';
+      }
+   }
+
+   return in;
+}
+
+Map wallify(Map c) {
+   Map ret;
+   for (int j = 0; j < SIZE; j++) {
+      for (int i = 0; i < SIZE; i++) {
+         if (c.str[j][i] != '*') {
+            ret.str[j][i] = c.str[j][i];
+         }
+         else {
+            int index = 0;
+            if (j >  0 && c.str[j-1][i] == '*') index |= 8; // up
+            if (j < (SIZE-1) && c.str[j+1][i] == '*') index |= 4; // down
+            if (i >  0 && c.str[j][i-1] == '*') index |= 2; // left
+            if (i < (SIZE-1) && c.str[j][i+1] == '*') index |= 1; // right
+
+            if (index == 0 && (i == 0 || i == (SIZE-1))) index |= 3;
+            if (index == 0 && (j == 0 || j == (SIZE-1))) index |= 12;
+
+#if 0
+            if (see) {
+               int mask = 0;
+               // assume @ is 8,8
+               if (j < 8 && (index & 3) == 3) mask |= 8;
+               if (j > 8 && (index & 3) == 3) mask |= 4;
+               if (i < 8 && (index & 12) == 12) mask |= 2;
+               if (i > 8 && (index & 12) == 12) mask |= 1;
+
+               index &= ~mask;
+            }
+#endif
+
+            ret.str[j][i] = linechars[index];
+         }
+      }
+   }
+
+   return ret;
+}
+
+Map fixsingles(Map a, Map b) {
+   for (int y = 0; y < SIZE; y++) {
+      for (int x = 0; x < SIZE; x++) {
+         if (a.str[y][x] == linechars[0]) {
+            a.str[y][x] = b.str[y][x];
+         }
+      }
+   }
+   return a;
+}
+
+// our entry point
+int main(int argc, char **argv) {
+   int x = argc > 1 ? atoi(argv[1]) : 1;
+   int y = argc > 2 ? atoi(argv[2]) : 1;
+
+   // assure we don't start in a wall
+   x = (x & ~1) + 1;
+   y = (y & ~1) + 1;
+
+   unbuffer();
+
+   while (1) {
+      int nx;
+      int ny;
+
+      clear();
+      printf("%d,%d\n", x, y);
+
+      Map drawme = do_map(x,y);
+      Map singles = wallify(drawme);
+
+      if (see) {
+         drawme = sight(drawme);
+      }
+
+      drawme = wallify(drawme);
+      drawme = fixsingles(drawme, singles);
+
+      for (int j = 0; j < PORTAL_Y; j++) {
+         int y = j + (SIZE - PORTAL_Y) / 2;
+         for (int i = 0; i < PORTAL_X; i++) {
+            int x = i + (SIZE - PORTAL_X) / 2;
+
+            if (drawme.str[y][x] == '@') {
+               nx = x;
+               ny = y;
+            }
+            utf8print(drawme.str[y][x]);
+         }
+         if (j < sizeof(help) / sizeof(help[0])) {
+            printf("   %s\n", help[j]);
+         }
+         else {
+            printf("\n");
+         }
+      }
+
+      int dx = 0;
+      int dy = 0;
+
+      int u = getchar();
+      switch(u) {
+         case 'k': dy--; break;
+         case 'j': dy++; break;
+         case 'h': dx--; break;
+         case 'l': dx++; break;
+         case 'y': dy--; dx--; break;
+         case 'u': dy--; dx++; break;
+         case 'b': dy++; dx--; break;
+         case 'n': dy++; dx++; break;
+         case 's': see = !see; break;
+
+         case 'q': exit(0); break;
+      }
+
+      if (drawme.str[ny+dy][nx+dx] == ' ') {
+         x += dx;
+         y += dy;
+      }
+   }
+}
