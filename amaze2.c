@@ -92,6 +92,12 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
                srand(seed);
 
                int tmp = rand();
+
+               // unsure that at least one repair bit is set
+               while (tmp && !(tmp & (4|8))) {
+                  tmp >>= 2;
+               }
+
                if ((tmp & 4) && (iy > 0)) {
                   // space up
                   if (ret.str[iy - 1][ix] != ' ') {
@@ -112,17 +118,16 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
       }
    }
 
+#if 0
    for (int iy = 1; iy < SIZE - 1; iy++) {
       for (int ix = 1; ix < SIZE - 1; ix++) {
-         if (ret.str[iy-1][ix] == ' ' &&
-             ret.str[iy-1][ix] != ' ' &&
-             ret.str[iy+1][ix] != ' ' &&
-             ret.str[iy][ix-1] != ' ' &&
-             ret.str[iy][ix+1] != ' ') {
+         if (ret.str[iy][ix] == ' ' && !visited.str[iy][ix]) {
             ret.str[iy][ix] = 'X';
          }
       }
    }
+#endif
+
    return ret;
 }
 
