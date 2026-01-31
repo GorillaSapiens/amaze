@@ -134,66 +134,72 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
 Map repair_pillars(Map ret, int offset_x, int offset_y) {
    Map pillars;
    int count = -1;
-   
-   if(1) { //while (count != 0) {
-      memset(&pillars, 0, sizeof(pillars));
-      count = 0;
 
-#define FIND \
-      for (int iy = 1; iy < SIZE - 1; iy++) { \
-         for (int ix = 1; ix < SIZE - 1; ix++) { \
-            if (ret.str[iy][ix] == '*' && \
-                  ret.str[iy-1][ix] == ' ' && \
-                  ret.str[iy+1][ix] == ' ' && \
-                  ret.str[iy][ix-1] == ' ' && \
-                  ret.str[iy][ix+1] == ' ') { \
-               pillars.str[iy][ix] = ' '; \
-               count++; \
-            } \
-         } \
+   memset(&pillars, 0, sizeof(pillars));
+   count = 0;
+
+   // find 'em
+   for (int iy = 1; iy < SIZE - 1; iy++) {
+      for (int ix = 1; ix < SIZE - 1; ix++) {
+         if (ret.str[iy][ix] == '*' &&
+               ret.str[iy-1][ix] == ' ' &&
+               ret.str[iy+1][ix] == ' ' &&
+               ret.str[iy][ix-1] == ' ' &&
+               ret.str[iy][ix+1] == ' ') {
+            pillars.str[iy][ix] = ' ';
+            count++;
+         }
       }
+   }
 
-      // find em
-      FIND;
+   // bridge adjacent pillars
+   for (int iy = 2; iy < SIZE; iy++) {
+      for (int ix = 2; ix < SIZE; ix++) {
+         if (pillars.str[iy][ix]) {
+            bool fix = false;
+            if (pillars.str[iy-2][ix]) {
+               ret.str[iy-1][ix] = '*';
+               pillars.str[iy-2][ix] = 0;
+               count--;
+               fix = true;
+            }
+            if (pillars.str[iy][ix-2]) {
+               ret.str[iy][ix-1] = '*';
+               pillars.str[iy][ix-2] = 0;
+               count--;
+               fix = true;
+            }
+            if (fix) {
+               pillars.str[iy][ix] = 0;
+               count--;
+            }
+         }
+      }
+   }
 
-      // bridge adjacent pillars
-      for (int iy = 2; iy < SIZE; iy++) {
-         for (int ix = 2; ix < SIZE; ix++) {
-            if (pillars.str[iy][ix] && pillars.str[iy-2][ix]) {
+   // connect lone pillars randomly
+   for (int iy = 2; iy < SIZE - 2; iy++) {
+      for (int ix = 2; ix < SIZE - 2; ix++) {
+         if (pillars.str[iy][ix]) {
+            // TODO FIX make this random
+            if (ret.str[iy-2][ix] == '*') {
                ret.str[iy-1][ix] = '*';
             }
-            if (pillars.str[iy][ix] && pillars.str[iy][ix-2]) {
+            else if (ret.str[iy+2][ix] == '*') {
+               ret.str[iy+1][ix] = '*';
+            }
+            else if (ret.str[iy][ix-2] == '*') {
                ret.str[iy][ix-1] = '*';
             }
-         }
-      }
-
-      // find em
-      FIND;
-
-      // connect randomly
-      for (int iy = 2; iy < SIZE - 2; iy++) {
-         for (int ix = 2; ix < SIZE - 2; ix++) {
-            if (pillars.str[iy][ix]) {
-               // TODO FIX make this random
-               if (ret.str[iy-2][ix] == '*') {
-                  ret.str[iy-1][ix] = '*';
-               }
-               else if (ret.str[iy+2][ix] == '*') {
-                  ret.str[iy+1][ix] = '*';
-               }
-               else if (ret.str[iy][ix-2] == '*') {
-                  ret.str[iy][ix-1] = '*';
-               }
-               else if (ret.str[iy][ix+2] == '*') {
-                  ret.str[iy][ix+1] = '*';
-               }
+            else if (ret.str[iy][ix+2] == '*') {
+               ret.str[iy][ix+1] = '*';
             }
+
+            // adjust count
+            pillars.str[iy][ix] = 0;
+            count--;
          }
       }
-
-      // find em
-      FIND;
    }
 
    return ret;
@@ -239,14 +245,20 @@ Map do_map(int x, int y) {
                   seed ^= 0xdeadbeef;
                   srand(seed);
 
-                  int tmp = rand();
-                  if ((tmp & 1) && (iy > 0)) {
-                     // wall up
-                     ret.str[iy - 1][ix] = '*';
+                  int tmp = rand() % 0x10;
+
+#define WALL_UP   do { if (iy > 0) ret.str[iy - 1][ix] = '*'; } while(0)
+#define WALL_LEFT do { if (ix > 0) ret.str[iy][ix - 1] = '*'; } while(0)
+
+                  if (tmp < 3) { // 3/16 chance
+                     WALL_UP;
+                     WALL_LEFT;
                   }
-                  if ((tmp & 2) && (ix > 0)) {
-                     // wall left
-                     ret.str[iy][ix - 1] = '*';
+                  else if (tmp < 6) { // 3/16 chance
+                     WALL_UP;
+                  }
+                  else if (tmp < 9) { // 3/16 chance
+                     WALL_LEFT;
                   }
                }
                break;
@@ -254,14 +266,11 @@ Map do_map(int x, int y) {
       }
    }
 
-   // join pillars
-   ret = repair_pillars(ret, offset_x, offset_y);
-
    // force reachability
    ret = repair_voids(ret, offset_x, offset_y);
 
+   // join pillars
    ret = repair_pillars(ret, offset_x, offset_y);
-   ret = repair_voids(ret, offset_x, offset_y);
 
    // place @
    ret.str[SIZE/2][SIZE/2] = '@';
