@@ -26,7 +26,7 @@ const char *help[11] = {
    "q to quit",
 };
 
-// based on Telengard
+// very loosely based on Telengard
 
 // we compute a slightly larger map to avoid artifacts
 // at view portal edges
@@ -280,23 +280,23 @@ Map do_map(int x, int y) {
 
 // line drawing characters
 int linechars[16] = {
-         // udlr
-0x25CB,  // 0000 // a circle
-0x2501,  // 0001
-0x2501,  // 0010
-0x2501,  // 0011
-0x2503,  // 0100
-0x250F,  // 0101
-0x2513,  // 0110
-0x2533,  // 0111
-0x2503,  // 1000
-0x2517,  // 1001
-0x251B,  // 1010
-0x253B,  // 1011
-0x2503,  // 1100
-0x2523,  // 1101
-0x252B,  // 1110
-0x254B,  // 1111
+   // udlr
+   0x25CB,  // 0000 // a circle
+   0x2501,  // 0001
+   0x2501,  // 0010
+   0x2501,  // 0011
+   0x2503,  // 0100
+   0x250F,  // 0101
+   0x2513,  // 0110
+   0x2533,  // 0111
+   0x2503,  // 1000
+   0x2517,  // 1001
+   0x251B,  // 1010
+   0x253B,  // 1011
+   0x2503,  // 1100
+   0x2523,  // 1101
+   0x252B,  // 1110
+   0x254B,  // 1111
 };
 
 // print a utf8 character
@@ -347,7 +347,7 @@ static inline int sign(int x) {
 typedef struct Obst {
    int x;
    int y;
-   int d2;
+   int d2; // distance squared
    double theta;
    bool visited;
    int hidden;
@@ -385,8 +385,8 @@ void sight_helper(Obst *o, int size, int x, int y) {
             // i and j are adjacent
             for (int k = 0; k < size; k++) {
                if (k != i && k != j &&
-                   o[k].d2 >= o[i].d2 &&
-                   o[k].d2 >= o[j].d2) {
+                     o[k].d2 >= o[i].d2 &&
+                     o[k].d2 >= o[j].d2) {
                   double ij = fabs(o[i].theta - o[j].theta);
                   if (ij > M_PI) { ij = 2.0 * M_PI - ij; }
                   double ik = fabs(o[i].theta - o[k].theta);
@@ -395,25 +395,21 @@ void sight_helper(Obst *o, int size, int x, int y) {
                   if (jk > M_PI) { jk = 2.0 * M_PI - jk; }
 
 #ifdef DEBUG_SIGHT
-//if (o[k].y == 7 && o[k].x == 0) {
-   printf("=== %d(%d,%d)(%g) %d(%d,%d)(%g) %d(%d,%d)(%g)\n",
-   i, o[i].x - x, o[i].y - y, o[i].theta,
-   j, o[j].x - x, o[j].y - y, o[j].theta,
-   k, o[k].x - x, o[k].y - y, o[k].theta);
-   printf("ij=%g ik=%g jk=%g\n", ij, ik, jk);
-//}
+                  printf("=== %d(%d,%d)(%g) %d(%d,%d)(%g) %d(%d,%d)(%g)\n",
+                        i, o[i].x - x, o[i].y - y, o[i].theta,
+                        j, o[j].x - x, o[j].y - y, o[j].theta,
+                        k, o[k].x - x, o[k].y - y, o[k].theta);
+                  printf("ij=%g ik=%g jk=%g\n", ij, ik, jk);
 #endif
                   if (ik <= ij && jk <= ij) {
-                     if (1) { //!o[k].visited) {
                         o[k].hidden++;
                         o[k].visited = true;
-                     }
 #ifdef DEBUG_SIGHT
-printf("%d,%d :: %d,%d,%d obscured by %d,%d,%d and %d,%d,%d\n",
-x, y,
-o[k].x, o[k].y, o[k].d2,
-o[i].x, o[i].y, o[i].d2,
-o[j].x, o[j].y, o[j].d2);
+                        printf("%d,%d :: %d,%d,%d obscured by %d,%d,%d and %d,%d,%d\n",
+                              x, y,
+                              o[k].x, o[k].y, o[k].d2,
+                              o[i].x, o[i].y, o[i].d2,
+                              o[j].x, o[j].y, o[j].d2);
 #endif
                   }
                }
@@ -424,7 +420,7 @@ o[j].x, o[j].y, o[j].d2);
 }
 
 Map sight(Map in) {
-   Obst obst[SIZE*SIZE];
+   Obst obst[SIZE * SIZE];
    int spot = 0;
 
    int atx, aty;
