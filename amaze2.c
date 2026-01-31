@@ -7,6 +7,18 @@
 #include <math.h>
 #include <float.h>
 
+#define ANSI_FORE    30
+#define ANSI_BACK    40
+#define ANSI_BRIGHT  60
+#define COLOR_BLACK   0
+#define COLOR_RED     1
+#define COLOR_GREEN   2
+#define COLOR_YELLOW  3
+#define COLOR_BLUE    4
+#define COLOR_MAGENTA 5
+#define COLOR_CYAN    6
+#define COLOR_WHITE   7
+
 bool raw = false;
 bool see = false;
 bool phase = false;
@@ -320,6 +332,11 @@ void clear(void) {
    printf("\033[2J\033[H");
 }
 
+// set a color
+void color(int color) {
+   printf("\033[%dm", color);
+}
+
 // set stdin as unbuffered
 void unbuffer(void) {
    static struct termios oldt, newt;
@@ -540,7 +557,9 @@ int main(int argc, char **argv) {
             utf8print(drawme.str[y][x]);
          }
          if (j < sizeof(help) / sizeof(help[0])) {
+            color(ANSI_FORE + COLOR_WHITE);
             printf("   %s\n", help[j]);
+            color(ANSI_FORE + ANSI_BRIGHT + COLOR_WHITE);
          }
          else {
             printf("\n");
