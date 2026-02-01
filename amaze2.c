@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <float.h>
+#include <signal.h>
 
 #define ANSI_FORE    30
 #define ANSI_BACK    40
@@ -22,6 +23,8 @@
 bool raw = false;
 bool see = false;
 bool phase = false;
+int screen_w = 80;
+int screen_h = 21;
 
 // in screen help
 const char *help[11] = {
@@ -337,7 +340,7 @@ void color(int color) {
    printf("\033[%dm", color);
 }
 
-// set stdin as unbuffered
+// set stdin/stdout as unbuffered
 void unbuffer(void) {
    static struct termios oldt, newt;
 
@@ -355,6 +358,9 @@ void unbuffer(void) {
    /*Those new settings will be set to STDIN
      TCSANOW tells tcsetattr to change attributes immediately. */
    tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+
+   //stdout also
+   setvbuf(stdout, NULL, _IONBF, 0);   // or _IOLBF for line buffered
 }
 
 static inline int sign(int x) {
@@ -512,6 +518,82 @@ Map fixsingles(Map a, Map b) {
    return a;
 }
 
+// SIGWINCH handler
+void sigwinch_handler(int) {
+   printf("\033[18t");
+}
+
+void getwinch(void) {
+   int mode = 0;
+   int rows = 0;
+   int cols = 0;
+
+   clear();
+
+   // ESC [ 8 ; rows ; cols t
+   while (1) {
+      int u = getchar();
+
+      switch(mode) {
+         case 0:
+            if (u == '[') {
+               mode++;
+            }
+            else {
+               // some other input
+               return;
+            }
+            break;
+         case 1:
+            if (u == '8') {
+               mode++;
+            }
+            else {
+               // some other input
+               return;
+            }
+            break;
+         case 2:
+            if (u == ';') {
+               mode++;
+            }
+            else {
+               // some other input
+               return;
+            }
+            break;
+         case 3:
+            if (u == ';') {
+               mode++;
+            }
+            else if (u >= '0' && u <= '9') {
+               rows *= 10;
+               rows += u - '0';
+            }
+            else {
+               // some other input
+               return;
+            }
+            break;
+         case 4:
+            if (u == 't') {
+               screen_w = cols;
+               screen_h = rows;
+               return;
+            }
+            else if (u >= '0' && u <= '9') {
+               cols *= 10;
+               cols += u - '0';
+            }
+            else {
+               // some other input
+               return;
+            }
+            break;
+      }
+   }
+}
+
 // our entry point
 int main(int argc, char **argv) {
    int x = argc > 1 ? atoi(argv[1]) : 1;
@@ -521,14 +603,13 @@ int main(int argc, char **argv) {
    x = (x & ~1) + 1;
    y = (y & ~1) + 1;
 
+   signal(SIGWINCH, sigwinch_handler);
    unbuffer();
+   printf("\033[18t"); // get window size
 
    while (1) {
-      int nx;
-      int ny;
-
       clear();
-      printf("%d,%d\n", x, y);
+      printf("%d,%d [%d,%d]\n", x, y, screen_w, screen_h);
 
       Map drawme = do_map(x,y);
       Map singles = wallify(drawme);
@@ -541,6 +622,9 @@ int main(int argc, char **argv) {
          drawme = wallify(drawme);
          drawme = fixsingles(drawme, singles);
       }
+
+      int nx;
+      int ny;
 
       for (int j = 0; j < PORTAL_Y; j++) {
          int y = j + (SIZE - PORTAL_Y) / 2;
@@ -585,6 +669,9 @@ int main(int argc, char **argv) {
          case 'r': raw = !raw; break;
 
          case 'q': exit(0); break;
+
+         // escape
+         case 0x1B: getwinch(); break;
       }
 
       if (drawme.str[ny+dy][nx+dx] == ' ' || phase) {
