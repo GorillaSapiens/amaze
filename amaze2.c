@@ -57,6 +57,91 @@ typedef struct Map {
    int str[SIZE][SIZE+1];
 } Map;
 
+// obstruction extent
+typedef struct ObstExt {
+   double ctheta; // center angle from observer
+   double dtheta; // the +/- obscured angle
+} ObstExt;
+
+ObstExt obstructs[SIZE][SIZE];
+
+#define OBST_R (1.00 / 2.0) // obstruction radius
+
+// initialize obstruction maps
+void init_obstructs(void) {
+   int cx = SIZE / 2;
+   int cy = SIZE / 2;
+
+   for (int y = 0; y < SIZE; y++) {
+      for (int x = 0; x < SIZE; x++) {
+         int dx = x - cx;
+         int dy = y - cy;
+         double d = sqrt(dx * dx + dy * dy);
+         if (d != 0.0) {
+            obstructs[y][x].ctheta = atan2((double) dy, (double) dx);
+            obstructs[y][x].dtheta = asin(OBST_R / d);
+         }
+      }
+   }
+}
+
+typedef struct { double lo, hi; } Range;
+
+int cmp_range(const void *a, const void *b)
+{
+   const Range *A = a, *B = b;
+   return (A->lo < B->lo) ? -1 : (A->lo > B->lo);
+}
+
+size_t merge_ranges(Range *ranges, size_t n)
+{
+   if (n == 0) return 0;
+   qsort(ranges, n, sizeof *ranges, cmp_range);
+
+   size_t write = 0;
+   for (size_t read = 1; read < n; read++) {
+      if (ranges[write].hi >= ranges[read].lo) {
+         if (ranges[read].hi > ranges[write].hi) {
+            ranges[write].hi = ranges[read].hi;
+         }
+      } else {
+         ranges[++write] = ranges[read];
+      }
+   }
+   return write + 1; // new count
+}
+
+typedef struct Order {
+   int d2;
+   int u;
+   int v;
+} Order;
+
+#define ORDERSIZE ((SIZE / 2) * ((SIZE / 2) + 1) / 2)
+Order orders[ORDERSIZE];
+
+int cmp_orders(const void *a, const void *b) {
+   const Order *oa = a;
+   const Order *ob = b;
+
+   if (oa->d2 < ob->d2) return -1;
+   if (oa->d2 > ob->d2) return  1;
+   return 0;
+}
+
+void init_orders(void) {
+   int n = 0;
+   for (int u = 0; u < SIZE / 2; u++) {
+      for (int v = 0; v <= u; v++) {
+         orders[n].d2 = u * u + v * v;
+         orders[n].u = u;
+         orders[n].v = v;
+         n++;
+      }
+   }
+   qsort(orders, n, sizeof(*orders), cmp_orders);
+}
+
 Map repair_voids(Map ret, int offset_x, int offset_y) {
    Map visited;
 
@@ -369,117 +454,79 @@ static inline int sign(int x) {
    return (x > 0) - (x < 0);
 }
 
-typedef struct Obst {
-   int x;
-   int y;
-   int d2; // distance squared
-   double theta;
-   bool visited;
-   int hidden;
-} Obst;
+bool obscured(Map *mask, Map *in, int y, int x, int *count, Range **ranges) {
+   double ctheta = obstructs[y][x].ctheta;
+   double dtheta = obstructs[y][x].dtheta;
 
-#define ORDERED(a,b,c) ((a) <= (b) && (b) <= (c))
-
-void sight_helper(Obst *o, int size, int x, int y) {
-   // update d2 and theta
-   for (int i = 0; i < size; i++) {
-      int dx = o[i].x - x;
-      int dy = o[i].y - y;
-      o[i].visited = false;
-      o[i].d2 = dx * dx + dy * dy;
-      o[i].theta = atan2(dy, dx) + M_PI; // range 0 to 2pi
-   }
-   // sort by d2
-   for (int i = 0; i < size; i++) {
-      for (int j = i + 1; j < size; j++) {
-         if (o[j].d2 < o[i].d2) {
-            Obst tmp;
-            memcpy(&tmp, o + i, sizeof(tmp));
-            memcpy(o + i, o + j, sizeof(tmp));
-            memcpy(o + j, &tmp, sizeof(tmp));
-         }
+   for (int i = 0; i < *count; i++) {
+      if ((*ranges)[i].lo < ctheta - dtheta && (*ranges)[i].hi > ctheta + dtheta) {
+         return true;
       }
    }
-   // find adjacent pairs of obst
-   for (int i = 0; i < size; i++) {
-      for (int j = i + 1; j < size; j++) {
-         int dx = o[i].x - o[j].x;
-         int dy = o[i].y - o[j].y;
-         int d2 = dx * dx + dy * dy;
-         if (d2 <= 1) {
-            // i and j are adjacent
-            for (int k = 0; k < size; k++) {
-               if (k != i && k != j &&
-                     o[k].d2 >= o[i].d2 &&
-                     o[k].d2 >= o[j].d2) {
-                  double ij = fabs(o[i].theta - o[j].theta);
-                  if (ij > M_PI) { ij = 2.0 * M_PI - ij; }
-                  double ik = fabs(o[i].theta - o[k].theta);
-                  if (ik > M_PI) { ik = 2.0 * M_PI - ik; }
-                  double jk = fabs(o[j].theta - o[k].theta);
-                  if (jk > M_PI) { jk = 2.0 * M_PI - jk; }
 
-#ifdef DEBUG_SIGHT
-                  printf("=== %d(%d,%d)(%g) %d(%d,%d)(%g) %d(%d,%d)(%g)\n",
-                        i, o[i].x - x, o[i].y - y, o[i].theta,
-                        j, o[j].x - x, o[j].y - y, o[j].theta,
-                        k, o[k].x - x, o[k].y - y, o[k].theta);
-                  printf("ij=%g ik=%g jk=%g\n", ij, ik, jk);
-#endif
-                  if (ik <= ij && jk <= ij) {
-                        o[k].hidden++;
-                        o[k].visited = true;
-#ifdef DEBUG_SIGHT
-                        printf("%d,%d :: %d,%d,%d obscured by %d,%d,%d and %d,%d,%d\n",
-                              x, y,
-                              o[k].x, o[k].y, o[k].d2,
-                              o[i].x, o[i].y, o[i].d2,
-                              o[j].x, o[j].y, o[j].d2);
-#endif
-                  }
-               }
-            }
-         }
+   // it is visible !!!
+   mask->str[y][x] = ' ';
+
+   if (in->str[y][x] != ' ') {
+      // add it to obscured ranges
+      *ranges = (Range *) realloc(*ranges, sizeof(Range) * ((*count) + 1));
+      (*ranges)[*count].lo = ctheta - dtheta;
+      (*ranges)[*count].hi = ctheta + dtheta;
+      (*count)++;
+
+      // to accomodate wrap...
+      if (ctheta + dtheta > M_PI) {
+         *ranges = (Range *) realloc(*ranges, sizeof(Range) * ((*count) + 1));
+         (*ranges)[*count].lo = ctheta - dtheta - 2.0 * M_PI;
+         (*ranges)[*count].hi = ctheta + dtheta - 2.0 * M_PI;
+         (*count)++;
       }
+      else if (ctheta - dtheta < M_PI) {
+         *ranges = (Range *) realloc(*ranges, sizeof(Range) * ((*count) + 1));
+         (*ranges)[*count].lo = ctheta - dtheta + 2.0 * M_PI;
+         (*ranges)[*count].hi = ctheta + dtheta + 2.0 * M_PI;
+         (*count)++;
+      }
+
+      // merge and adjust count
+      *count = merge_ranges(*ranges, *count);
    }
+
+   return false;
 }
 
 Map sight(Map in) {
-   Obst obst[SIZE * SIZE];
-   int spot = 0;
+   int atx = SIZE / 2;
+   int aty = SIZE / 2;
 
-   int atx, aty;
+   Map mask;
+   memset(&mask, 0, sizeof(mask));
 
-   // find @
+   mask.str[aty][atx] = ' ';
+
+   int count = 0;
+   Range *ranges = NULL;
+   
+   for (int i = 1; i < ORDERSIZE; i++) {
+      obscured(&mask, &in, aty + orders[i].u, atx + orders[i].v, &count, &ranges);
+      obscured(&mask, &in, aty + orders[i].u, atx - orders[i].v, &count, &ranges);
+      obscured(&mask, &in, aty - orders[i].u, atx + orders[i].v, &count, &ranges);
+      obscured(&mask, &in, aty - orders[i].u, atx - orders[i].v, &count, &ranges);
+      obscured(&mask, &in, aty + orders[i].v, atx + orders[i].u, &count, &ranges);
+      obscured(&mask, &in, aty + orders[i].v, atx - orders[i].u, &count, &ranges);
+      obscured(&mask, &in, aty - orders[i].v, atx + orders[i].u, &count, &ranges);
+      obscured(&mask, &in, aty - orders[i].v, atx - orders[i].u, &count, &ranges);
+   }
+
    for (int y = 0; y < SIZE; y++) {
       for (int x = 0; x < SIZE; x++) {
-         if (in.str[y][x] == '@') {
-            atx = x;
-            aty = y;
+         if (!mask.str[y][x]) {
+            in.str[y][x] = '?';
          }
       }
    }
 
-   // populate obst
-   for (int y = 0; y < SIZE; y++) {
-      for (int x = 0; x < SIZE; x++) {
-         if (in.str[y][x] != ' ' && in.str[y][x] != '@') {
-            obst[spot].x = x;
-            obst[spot].y = y;
-            obst[spot].hidden = 0;
-            spot++;
-         }
-      }
-   }
-
-   sight_helper(obst, spot, atx, aty);
-
-   // erase anything hidden hcalls times
-   for (int i = 0; i < spot; i++) {
-      if (obst[i].hidden) {
-         in.str[obst[i].y][obst[i].x] = ' ';
-      }
-   }
+   free(ranges);
 
    return in;
 }
@@ -608,13 +655,17 @@ int main(int argc, char **argv) {
    x = (x & ~1) + 1;
    y = (y & ~1) + 1;
 
+   // initialize our obstruction maps
+   init_orders();
+   init_obstructs();
+
    signal(SIGWINCH, sigwinch_handler);
    unbuffer();
    printf("\033[18t"); // get window size
 
    while (1) {
       clear();
-      printf("%d,%d [%d,%d]\n", x, y, screen_w, screen_h);
+      printf("%d,%d [%d,%d] %s\n", x, y, screen_w, screen_h, see ? "see" : "!see");
 
       Map drawme = do_map(x,y);
       Map singles = wallify(drawme);
