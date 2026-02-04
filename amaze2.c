@@ -46,9 +46,11 @@ const char *help[11] = {
 // we compute a slightly larger map to avoid artifacts
 // at view portal edges
 
-#define SIZE 80     // size of computed map
-#define PORTAL_X 64 // player visibility into map
-#define PORTAL_Y 20 // player visibility into map
+#define SIZE 128     // size of computed map
+
+// player visibility into map
+int portal_x = 64;
+int portal_y = 20;
 
 // a struct to hold the map
 typedef struct Map {
@@ -579,6 +581,9 @@ void getwinch(void) {
             if (u == 't') {
                screen_w = cols;
                screen_h = rows;
+
+               portal_x = screen_w * 3 / 4;
+               portal_y = screen_h - 3;
                return;
             }
             else if (u >= '0' && u <= '9') {
@@ -626,10 +631,10 @@ int main(int argc, char **argv) {
       int nx;
       int ny;
 
-      for (int j = 0; j < PORTAL_Y; j++) {
-         int y = j + (SIZE - PORTAL_Y) / 2;
-         for (int i = 0; i < PORTAL_X; i++) {
-            int x = i + (SIZE - PORTAL_X) / 2;
+      for (int j = 0; j < portal_y; j++) {
+         int y = j + (SIZE - portal_y) / 2;
+         for (int i = 0; i < portal_x; i++) {
+            int x = i + (SIZE - portal_x) / 2;
 
             if (drawme.str[y][x] == '@') {
                nx = x;
