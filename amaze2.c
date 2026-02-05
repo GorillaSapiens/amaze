@@ -521,7 +521,7 @@ Map sight(Map in) {
    for (int y = 0; y < SIZE; y++) {
       for (int x = 0; x < SIZE; x++) {
          if (!mask.str[y][x]) {
-            in.str[y][x] = '?';
+            in.str[y][x] = ' '; // replacement chars
          }
       }
    }

@@ -6,8 +6,5 @@ amaze: amaze.c
 amaze2: amaze2.c
 	gcc -g -Wall amaze2.c -o amaze2 -lm
 
-debug: amaze.c
-	gcc -g -Wall -DDEBUG_SIGHT amaze.c -o amaze -lm
-
-debug2: amaze2.c
-	gcc -g -Wall -DDEBUG_SIGHT amaze2.c -o amaze2 -lm
+debug: amaze2.c
+	clang -fsanitize=address -g -O0 amaze2.c -o amaze2
