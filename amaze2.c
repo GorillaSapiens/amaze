@@ -25,9 +25,10 @@ bool see = false;
 bool phase = false;
 int screen_w = 80;
 int screen_h = 21;
+int xor = 0; //0xdeadbeef;
 
 // in screen help
-const char *help[11] = {
+const char *help[12] = {
    "Procedural maze demo.",
    "",
    "movement:",
@@ -38,6 +39,7 @@ const char *help[11] = {
    "s toggle sightlines",
    "p toggle phase",
    "r toggle raw",
+   "a/z inc/dec xor",
    "q to quit",
 };
 
@@ -142,6 +144,17 @@ void init_orders(void) {
    qsort(orders, n, sizeof(*orders), cmp_orders);
 }
 
+int posrand(int y, int x) {
+   // Double, double toil and trouble...
+   int seed = x & 0xFFFF;
+   seed <<= 16;
+   seed += y & 0xFFFF;
+   seed ^= xor;
+   srand(seed);
+
+   return rand();
+}
+
 Map repair_voids(Map ret, int offset_x, int offset_y) {
    Map visited;
 
@@ -186,14 +199,7 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
 
             if (typ == 3 && ret.str[iy][ix] == ' ' && !visited.str[iy][ix]) {
                // we need a repair here!
-
-               int seed = (offset_x + ix) & 0xFFFF;
-               seed <<= 16;
-               seed += (offset_y + iy) & 0xFFFF;
-               seed ^= 0xdeadbeef;
-               srand(seed);
-
-               int tmp = rand();
+               int tmp = posrand(offset_y + iy, offset_x + ix);
 
                // unsure that at least one repair bit is set
                while (tmp && !(tmp & (4|8))) {
@@ -215,7 +221,6 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
                   }
                }
             }
-
          }
       }
    }
@@ -340,14 +345,7 @@ Map do_map(int x, int y) {
                break;
             case 3:
                {
-                  // Double, double toil and trouble...
-                  int seed = (offset_x + ix) & 0xFFFF;
-                  seed <<= 16;
-                  seed += (offset_y + iy) & 0xFFFF;
-                  seed ^= 0xdeadbeef;
-                  srand(seed);
-
-                  int tmp = rand() % 0x10;
+                  int tmp = posrand(offset_y + iy, offset_x + ix) % 0x10;
 
 #define WALL_UP   do { if (iy > 0) ret.str[iy - 1][ix] = '*'; } while(0)
 #define WALL_LEFT do { if (ix > 0) ret.str[iy][ix - 1] = '*'; } while(0)
@@ -665,7 +663,7 @@ int main(int argc, char **argv) {
 
    while (1) {
       clear();
-      printf("%d,%d [%d,%d] %s\n", x, y, screen_w, screen_h, see ? "see" : "!see");
+      printf("%d,%d [%d,%d] %08x %s\n", x, y, screen_w, screen_h, xor, see ? "see" : "!see");
 
       Map drawme = do_map(x,y);
       Map singles = wallify(drawme);
@@ -723,6 +721,9 @@ int main(int argc, char **argv) {
          case 's': see = !see; break;
          case 'p': phase = !phase; break;
          case 'r': raw = !raw; break;
+
+         case 'a': xor++; break;
+         case 'z': xor--; break;
 
          case 'q': exit(0); break;
 
