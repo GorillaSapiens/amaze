@@ -35,7 +35,7 @@
 #define COLOR_BRIGHT_WHITE   (ANSI_BRIGHT + COLOR_WHITE)
 
 bool raw = false;
-bool see = false;
+bool use_sightlines = true;
 bool phase = false;
 int screen_w = 80;
 int screen_h = 21;
@@ -602,10 +602,7 @@ Map sight(Map in) {
 
    for (int y = 0; y < SIZE; y++) {
       for (int x = 0; x < SIZE; x++) {
-         if (!mask.str[y][x]) {
-            in.str[y][x] = ' '; // replacement chars
-         }
-         else {
+         if (mask.str[y][x]) {
             sa_set(samem, mask.offset_y + y, mask.offset_x + x);
          }
       }
@@ -613,7 +610,7 @@ Map sight(Map in) {
 
    free(ranges);
 
-   return in;
+   return mask;
 }
 
 Map wallify(Map c) {
@@ -754,14 +751,15 @@ int main(int argc, char **argv) {
       clear();
       cprintf(COLOR_BLACK, COLOR_BRIGHT_CYAN,
               "%d,%d [%d,%d] %08x %s\n",
-              x, y, screen_w, screen_h, xor, see ? "see" : "!see");
+              x, y, screen_w, screen_h, xor, use_sightlines ? "sightlines" : "!sightlines");
 
       Map drawme = do_map(x,y);
+      Map mask;
       Map singles = wallify(drawme);
 
       if (!raw) {
-         if (see) {
-            drawme = sight(drawme);
+         if (use_sightlines) {
+            mask = sight(drawme);
          }
 
          drawme = wallify(drawme);
@@ -783,7 +781,30 @@ int main(int argc, char **argv) {
                   drawme.str[y][x] = 'X';
                }
             }
-            utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
+            if (use_sightlines) {
+               if (mask.str[y][x]) {
+                  if (drawme.str[y][x] != ' ') {
+                     utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
+                  }
+                  else {
+                     utf8printchar(COLOR_BLUE, COLOR_BLACK, 0xB7);
+                  }
+               }
+               else if (sa_get(samem, mask.offset_y + y, mask.offset_x + x)) {
+                  if (drawme.str[y][x] != ' ') {
+                     utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, drawme.str[y][x]);
+                  }
+                  else {
+                     utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, 0xB7);
+                  }
+               }
+               else {
+                  utf8printchar(COLOR_WHITE, COLOR_BLACK, ' ');
+               }
+            }
+            else {
+               utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
+            }
          }
          if (j < sizeof(help) / sizeof(help[0])) {
             cprintf(COLOR_WHITE, COLOR_BLACK,"   %s\n", help[j]);
@@ -807,7 +828,7 @@ int main(int argc, char **argv) {
          case 'b': dy++; dx--; break;
          case 'n': dy++; dx++; break;
 
-         case 's': see = !see; break;
+         case 's': use_sightlines = !use_sightlines; break;
          case 'p': phase = !phase; break;
          case 'r': raw = !raw; break;
 
