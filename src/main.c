@@ -36,6 +36,7 @@
 
 bool raw = false;
 bool use_sightlines = true;
+int sight_dist2 = 3; // sight distance squared
 bool phase = false;
 int screen_w = 80;
 int screen_h = 21;
@@ -588,7 +589,7 @@ Map sight(Map in) {
 
    int count = 0;
    Range *ranges = NULL;
-   
+
    for (int i = 1; i < ORDERSIZE; i++) {
       obscured(&mask, &in, aty + orders[i].u, atx + orders[i].v, &count, &ranges);
       obscured(&mask, &in, aty + orders[i].u, atx - orders[i].v, &count, &ranges);
@@ -601,7 +602,14 @@ Map sight(Map in) {
    }
 
    for (int y = 0; y < SIZE; y++) {
+      int dy = abs(y - aty);
       for (int x = 0; x < SIZE; x++) {
+         int dx = abs(x - atx);
+
+         if ((dy*dy+dx*dx) > (sight_dist2)) {
+            mask.str[y][x] = 0;
+         }
+
          if (mask.str[y][x]) {
             sa_set(samem, mask.offset_y + y, mask.offset_x + x);
          }
