@@ -27,7 +27,7 @@ SparseArray *sa_new(void) {
    return calloc(1, sizeof(SparseArray));
 }
 
-void sa_set(SparseArray *sa, int16_t y, int16_t x) {
+void sa_set(SparseArray *sa, uint16_t y, uint16_t x) {
    if (sa->BIN == FULL_CHUNK) {
       return; // already set
    }
@@ -48,7 +48,7 @@ void sa_set(SparseArray *sa, int16_t y, int16_t x) {
    sa->BIN = FULL_CHUNK;
 }
 
-void sa_clr(SparseArray *sa, int16_t y, int16_t x) {
+void sa_clr(SparseArray *sa, uint16_t y, uint16_t x) {
    if (sa->BIN == EMPTY_CHUNK) {
       return; // already clear
    }
@@ -70,7 +70,7 @@ void sa_clr(SparseArray *sa, int16_t y, int16_t x) {
    sa->BIN = EMPTY_CHUNK;
 }
 
-bool sa_get(SparseArray *sa, int16_t y, int16_t x) {
+bool sa_get(SparseArray *sa, uint16_t y, uint16_t x) {
    if (sa->BIN == EMPTY_CHUNK) {
       return false;
    }

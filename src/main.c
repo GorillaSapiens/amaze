@@ -73,6 +73,8 @@ int portal_y = 20;
 // a struct to hold the map
 typedef struct Map {
    int str[SIZE][SIZE+1];
+   int offset_x;
+   int offset_y;
 } Map;
 
 // obstruction extent
@@ -171,7 +173,7 @@ int posrand(int y, int x) {
    return rand();
 }
 
-Map repair_voids(Map ret, int offset_x, int offset_y) {
+Map repair_voids(Map ret) {
    Map visited;
 
    memset(&visited, 0, sizeof(visited));
@@ -209,13 +211,13 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
       // repair one unvisited void per loop
       for (int iy = 1; !repaired && iy < SIZE - 1; iy++) {
          for (int ix = 1; !repaired && ix < SIZE - 1; ix++) {
-            int typ = (offset_x + ix) & 1;
+            int typ = (ret.offset_x + ix) & 1;
             typ <<= 1;
-            typ |= (offset_y + iy) & 1;
+            typ |= (ret.offset_y + iy) & 1;
 
             if (typ == 3 && ret.str[iy][ix] == ' ' && !visited.str[iy][ix]) {
                // we need a repair here!
-               int tmp = posrand(offset_y + iy, offset_x + ix);
+               int tmp = posrand(ret.offset_y + iy, ret.offset_x + ix);
 
                // unsure that at least one repair bit is set
                while (tmp && !(tmp & (4|8))) {
@@ -254,7 +256,7 @@ Map repair_voids(Map ret, int offset_x, int offset_y) {
    return ret;
 }
 
-Map repair_pillars(Map ret, int offset_x, int offset_y) {
+Map repair_pillars(Map ret) {
    Map pillars;
    int count = -1;
 
@@ -331,8 +333,8 @@ Map repair_pillars(Map ret, int offset_x, int offset_y) {
 // generate a map based on player position
 Map do_map(int x, int y) {
    Map ret;
-   int offset_x = x - SIZE/2;
-   int offset_y = y - SIZE/2;
+   ret.offset_x = x - SIZE/2;
+   ret.offset_y = y - SIZE/2;
 
    // tabla rasa
    for (int iy = 0; iy < SIZE; iy++) {
@@ -345,9 +347,9 @@ Map do_map(int x, int y) {
    // create framework and walls
    for (int iy = 0; iy < SIZE; iy++) {
       for (int ix = 0; ix < SIZE; ix++) {
-         int typ = (offset_x + ix) & 1;
+         int typ = (ret.offset_x + ix) & 1;
          typ <<= 1;
-         typ |= (offset_y + iy) & 1;
+         typ |= (ret.offset_y + iy) & 1;
 
          switch (typ) {
             case 0:
@@ -361,7 +363,7 @@ Map do_map(int x, int y) {
                break;
             case 3:
                {
-                  int tmp = posrand(offset_y + iy, offset_x + ix) % 0x10;
+                  int tmp = posrand(ret.offset_y + iy, ret.offset_x + ix) % 0x10;
 
 #define WALL_UP   do { if (iy > 0) ret.str[iy - 1][ix] = '*'; } while(0)
 #define WALL_LEFT do { if (ix > 0) ret.str[iy][ix - 1] = '*'; } while(0)
@@ -383,10 +385,10 @@ Map do_map(int x, int y) {
    }
 
    // force reachability
-   ret = repair_voids(ret, offset_x, offset_y);
+   ret = repair_voids(ret);
 
    // join pillars
-   ret = repair_pillars(ret, offset_x, offset_y);
+   ret = repair_pillars(ret);
 
    // place @
    ret.str[SIZE/2][SIZE/2] = '@';
@@ -581,6 +583,8 @@ Map sight(Map in) {
    memset(&mask, 0, sizeof(mask));
 
    mask.str[aty][atx] = ' ';
+   mask.offset_x = in.offset_x;
+   mask.offset_y = in.offset_y;
 
    int count = 0;
    Range *ranges = NULL;
@@ -600,6 +604,9 @@ Map sight(Map in) {
       for (int x = 0; x < SIZE; x++) {
          if (!mask.str[y][x]) {
             in.str[y][x] = ' '; // replacement chars
+         }
+         else {
+            sa_set(samem, mask.offset_y + y, mask.offset_x + x);
          }
       }
    }
@@ -745,7 +752,9 @@ int main(int argc, char **argv) {
 
    while (1) {
       clear();
-      printf("%d,%d [%d,%d] %08x %s\n", x, y, screen_w, screen_h, xor, see ? "see" : "!see");
+      cprintf(COLOR_BLACK, COLOR_BRIGHT_CYAN,
+              "%d,%d [%d,%d] %08x %s\n",
+              x, y, screen_w, screen_h, xor, see ? "see" : "!see");
 
       Map drawme = do_map(x,y);
       Map singles = wallify(drawme);
