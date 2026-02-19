@@ -142,6 +142,7 @@ A magical... magic thing.
 A marijuana brownie.
 A mason jar lies here open. Its label reads: "do not open!".
 A meat-scented air-freshener on a string dances in the breeze.
+A memory leak.
 A mere collection of pixels.
 A model of a twin-hulled sailboat.
 A naked singularity. You avert your eyes.
