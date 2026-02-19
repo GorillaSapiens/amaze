@@ -27,6 +27,19 @@ SparseArray *sa_new(void) {
    return calloc(1, sizeof(SparseArray));
 }
 
+void sa_delete(SparseArray *sa) {
+   for (int i = 0; i < 65536 / CHUNK_BITS; i++) {
+      for (int j = 0; j < 65536 / CHUNK_BITS; j++) {
+         if (sa->data[i][j]) {
+            if (sa->data[i][j] != FULL_CHUNK) {
+               free(sa->data[i][j]);
+            }
+            sa->data[i][j] = EMPTY_CHUNK;
+         }
+      }
+   }
+}
+
 void sa_set(SparseArray *sa, uint16_t y, uint16_t x) {
    if (sa->BIN == FULL_CHUNK) {
       return; // already set

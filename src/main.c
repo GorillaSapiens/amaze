@@ -868,8 +868,8 @@ int main(int argc, char **argv) {
          case 'p': phase = !phase; break;
          case 'r': show_raw = !show_raw; break;
 
-         case 'a': xor++; free(samem); samem = sa_new(); break;
-         case 'z': xor--; free(samem); samem = sa_new(); break;
+         case 'a': xor++; sa_delete(samem); samem = sa_new(); break;
+         case 'z': xor--; sa_delete(samem); samem = sa_new(); break;
 
          case 'q': exit(0); break;
 
