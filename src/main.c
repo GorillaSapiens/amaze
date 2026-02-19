@@ -36,7 +36,7 @@
 
 bool show_raw = false;
 bool use_sightlines = true;
-int sight_dist2 = 3; // sight distance squared
+int sight_dist2 = 8; // sight distance squared
 bool phase = false;
 int screen_w = 80;
 int screen_h = 21;
@@ -782,16 +782,9 @@ int main(int argc, char **argv) {
       Map memory = do_mem(x,y);
       Map drawme = do_walls(raw, memory);
 
-#if 0
-      if (!show_raw) {
-         if (use_sightlines) {
-            mask = sight(drawme);
-         }
-
-         drawme = wallify(drawme);
-         drawme = fixsingles(drawme, singles);
+      if (show_raw) {
+         memcpy(&drawme, &raw, sizeof(raw));
       }
-#endif
 
       int nx;
       int ny;
@@ -859,8 +852,8 @@ int main(int argc, char **argv) {
          case 'p': phase = !phase; break;
          case 'r': show_raw = !show_raw; break;
 
-         case 'a': xor++; break;
-         case 'z': xor--; break;
+         case 'a': xor++; free(samem); samem = sa_new(); break;
+         case 'z': xor--; free(samem); samem = sa_new(); break;
 
          case 'q': exit(0); break;
 
