@@ -8,12 +8,14 @@
 #include <math.h>
 #include <float.h>
 #include <signal.h>
+#include <stdarg.h>
 
 #include "sparse_array.h"
 
 #define ANSI_FORE    30
 #define ANSI_BACK    40
 #define ANSI_BRIGHT  60
+
 #define COLOR_BLACK   0
 #define COLOR_RED     1
 #define COLOR_GREEN   2
@@ -22,6 +24,15 @@
 #define COLOR_MAGENTA 5
 #define COLOR_CYAN    6
 #define COLOR_WHITE   7
+
+#define COLOR_BRIGHT_BLACK   (ANSI_BRIGHT + COLOR_BLACK)
+#define COLOR_BRIGHT_RED     (ANSI_BRIGHT + COLOR_RED)
+#define COLOR_BRIGHT_GREEN   (ANSI_BRIGHT + COLOR_GREEN)
+#define COLOR_BRIGHT_YELLOW  (ANSI_BRIGHT + COLOR_YELLOW)
+#define COLOR_BRIGHT_BLUE    (ANSI_BRIGHT + COLOR_BLUE)
+#define COLOR_BRIGHT_MAGENTA (ANSI_BRIGHT + COLOR_MAGENTA)
+#define COLOR_BRIGHT_CYAN    (ANSI_BRIGHT + COLOR_CYAN)
+#define COLOR_BRIGHT_WHITE   (ANSI_BRIGHT + COLOR_WHITE)
 
 bool raw = false;
 bool see = false;
@@ -404,22 +415,6 @@ int linechars[16] = {
    0x254B,  // 1111
 };
 
-// print a utf8 character
-void utf8print(unsigned int x) {
-   if (x <= 0x7F) {
-      printf("%c", x);
-   }
-   else if (x < 0x800) {
-      printf("%c%c", 0xC0 | (x >> 6), 0x80 | (x & 0x3F));
-   }
-   else if (x < 0x10000) {
-      printf("%c%c%c", 0xE0 | (x >> 12), 0x80 | ((x >> 6) & 0x3F), 0x80 | (x & 0x3F));
-   }
-   else {
-      printf("%c%c%c%c", 0xF0 | (x >> 18), 0x80 | ((x >> 12) & 0x3F), 0x80 | ((x >> 6) & 0x3F), 0x80 | (x & 0x3F));
-   }
-}
-
 // clear the screen
 void clear(void) {
    printf("\033[2J\033[H");
@@ -428,6 +423,86 @@ void clear(void) {
 // set a color
 void color(int color) {
    printf("\033[%dm", color);
+}
+
+// print a utf8 character
+void utf8printchar(unsigned char fg, unsigned char bg, unsigned int x) {
+   static unsigned char _fg = -1;
+   static unsigned char _bg = -1;
+
+   if (fg != _fg) {
+      _fg = fg;
+      color(ANSI_FORE + fg);
+   }
+
+   if (bg != _bg) {
+      _bg = bg;
+      color(ANSI_BACK + bg);
+   }
+
+   if (x <= 0x7F) {
+      printf("%c", x);
+   }
+   else if (x < 0x800) {
+      printf("%c%c",
+             0xC0 | (x >> 6),
+             0x80 | (x & 0x3F));
+   }
+   else if (x < 0x10000) {
+      printf("%c%c%c",
+             0xE0 | (x >> 12),
+             0x80 | ((x >> 6) & 0x3F),
+             0x80 | (x & 0x3F));
+   }
+   else {
+      printf("%c%c%c%c",
+             0xF0 | (x >> 18),
+             0x80 | ((x >> 12) & 0x3F),
+             0x80 | ((x >> 6) & 0x3F),
+             0x80 | (x & 0x3F));
+   }
+}
+
+int cprintf(unsigned char fg, unsigned char bg, const char *fmt, ...) {
+   char *buffer, *tmp;
+   int len;
+
+   va_list ap;
+   va_list ap_copy;
+
+   va_start(ap, fmt);
+   va_copy(ap_copy, ap);
+
+   // get required length
+   len = vsnprintf(NULL, 0, fmt, ap);
+   va_end(ap);
+
+   if (len <= 0)
+   {
+      va_end(ap_copy);
+      return 0;
+   }
+
+   // Allocate (+1 for null terminator)
+   buffer = tmp = malloc(len + 1);
+   if (!buffer)
+   {
+      va_end(ap_copy);
+      return 0;
+   }
+
+   // Second pass: actually format
+   vsnprintf(buffer, len + 1, fmt, ap_copy);
+   va_end(ap_copy);
+
+   while (*tmp) {
+      utf8printchar(fg, bg, *tmp);
+      tmp++;
+   }
+
+   free(buffer);
+
+   return len;
 }
 
 // set stdin/stdout as unbuffered
@@ -699,12 +774,10 @@ int main(int argc, char **argv) {
                   drawme.str[y][x] = 'X';
                }
             }
-            utf8print(drawme.str[y][x]);
+            utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
          }
          if (j < sizeof(help) / sizeof(help[0])) {
-            color(ANSI_FORE + COLOR_WHITE);
-            printf("   %s\n", help[j]);
-            color(ANSI_FORE + ANSI_BRIGHT + COLOR_WHITE);
+            cprintf(COLOR_WHITE, COLOR_BLACK,"   %s\n", help[j]);
          }
          else {
             printf("\n");
