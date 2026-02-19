@@ -3,6 +3,7 @@ CFLAGS = -g -Wall
 
 OBJS = \
    main.o \
+   entity.o \
    sparse_array.o
 
 all: amaze

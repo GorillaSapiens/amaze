@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <stdarg.h>
 
+#include "entity.h"
 #include "sparse_array.h"
 
 #define ANSI_FORE    30
@@ -639,6 +640,8 @@ Map do_sight(Map in) {
 
 Map do_walls(Map raw, Map mem) {
    Map ret;
+   ret.offset_y = raw.offset_y;
+   ret.offset_x = raw.offset_x;
    for (int j = 0; j < SIZE; j++) {
       for (int i = 0; i < SIZE; i++) {
          if (raw.str[j][i] != '*') {
@@ -767,6 +770,8 @@ int main(int argc, char **argv) {
 
    samem = sa_new();
 
+   ent_init();
+
    signal(SIGWINCH, sigwinch_handler);
    unbuffer();
    printf("\033[18t"); // get window size
@@ -807,7 +812,13 @@ int main(int argc, char **argv) {
                      utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
                   }
                   else {
-                     utf8printchar(COLOR_BLUE, COLOR_BLACK, 0xB7);
+                     Entity *ent = ent_get(drawme.offset_y + y, drawme.offset_x + x);
+                     if (ent) {
+                        utf8printchar(ent->fg, ent->bg, ent->unicode);
+                     }
+                     else {
+                        utf8printchar(COLOR_BLUE, COLOR_BLACK, 0xB7);
+                     }
                   }
                }
                else if (memory.str[y][x]) {
