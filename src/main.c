@@ -435,11 +435,6 @@ int linechars[16] = {
    0x254B,  // 1111
 };
 
-// clear the screen
-void clear(void) {
-   printf("\033[2J\033[H");
-}
-
 // set a color
 void color(int color) {
    printf("\033[%dm", color);
@@ -523,6 +518,11 @@ int cprintf(unsigned char fg, unsigned char bg, const char *fmt, ...) {
    free(buffer);
 
    return len;
+}
+
+// clear the screen
+void clear(void) {
+   cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "\033[2J\033[H");
 }
 
 // set stdin/stdout as unbuffered
@@ -793,6 +793,7 @@ int main(int argc, char **argv) {
 
       int nx;
       int ny;
+      Entity *nent = NULL;
 
       for (int j = 0; j < portal_y; j++) {
          int y = j + (SIZE - portal_y) / 2;
@@ -805,6 +806,7 @@ int main(int argc, char **argv) {
                if (phase) {
                   drawme.str[y][x] = 'X';
                }
+               nent = ent_get(drawme.offset_y + y, drawme.offset_x + x);
             }
             if (use_sightlines) {
                if (seen.str[y][x]) {
@@ -843,6 +845,9 @@ int main(int argc, char **argv) {
          else {
             printf("\n");
          }
+      }
+      if (nent) {
+         cprintf(nent->fg, nent->bg, "%s", nent->name);
       }
 
       int dx = 0;
