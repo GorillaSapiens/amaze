@@ -34,7 +34,7 @@
 #define COLOR_BRIGHT_CYAN    (ANSI_BRIGHT + COLOR_CYAN)
 #define COLOR_BRIGHT_WHITE   (ANSI_BRIGHT + COLOR_WHITE)
 
-bool raw = false;
+bool show_raw = false;
 bool use_sightlines = true;
 int sight_dist2 = 3; // sight distance squared
 bool phase = false;
@@ -331,8 +331,8 @@ Map repair_pillars(Map ret) {
    return ret;
 }
 
-// generate a map based on player position
-Map do_map(int x, int y) {
+// generate a raw map based on player position
+Map do_raw(int x, int y) {
    Map ret;
    ret.offset_x = x - SIZE/2;
    ret.offset_y = y - SIZE/2;
@@ -397,10 +397,26 @@ Map do_map(int x, int y) {
    return ret;
 }
 
+Map do_mem(int x, int y) {
+   Map ret;
+   memset(&ret, 0, sizeof(ret));
+   ret.offset_x = x - SIZE/2;
+   ret.offset_y = y - SIZE/2;
+
+   for (y = 0; y < SIZE; y++) {
+      for (x = 0; x < SIZE; x++) {
+         if (sa_get(samem, ret.offset_y + y, ret.offset_x + x)) {
+            ret.str[y][x] = ' ';
+         }
+      }
+   }
+   return ret;
+}
+
 // line drawing characters
 int linechars[16] = {
    // udlr
-   0x25CB,  // 0000 // a circle
+   0x25AA,  // 0000 // a square
    0x2501,  // 0001
    0x2501,  // 0010
    0x2501,  // 0011
@@ -576,7 +592,7 @@ bool obscured(Map *mask, Map *in, int y, int x, int *count, Range **ranges) {
    return false;
 }
 
-Map sight(Map in) {
+Map do_sight(Map in) {
    int atx = SIZE / 2;
    int aty = SIZE / 2;
 
@@ -621,19 +637,19 @@ Map sight(Map in) {
    return mask;
 }
 
-Map wallify(Map c) {
+Map do_walls(Map raw, Map mem) {
    Map ret;
    for (int j = 0; j < SIZE; j++) {
       for (int i = 0; i < SIZE; i++) {
-         if (c.str[j][i] != '*') {
-            ret.str[j][i] = c.str[j][i];
+         if (raw.str[j][i] != '*') {
+            ret.str[j][i] = raw.str[j][i];
          }
          else {
             int index = 0;
-            if (j >  0 && c.str[j-1][i] == '*') index |= 8; // up
-            if (j < (SIZE-1) && c.str[j+1][i] == '*') index |= 4; // down
-            if (i >  0 && c.str[j][i-1] == '*') index |= 2; // left
-            if (i < (SIZE-1) && c.str[j][i+1] == '*') index |= 1; // right
+            if (j >  0       && raw.str[j-1][i] == '*' && mem.str[j-1][i]) index |= 8; // up
+            if (j < (SIZE-1) && raw.str[j+1][i] == '*' && mem.str[j+1][i]) index |= 4; // down
+            if (i >  0       && raw.str[j][i-1] == '*' && mem.str[j][i-1]) index |= 2; // left
+            if (i < (SIZE-1) && raw.str[j][i+1] == '*' && mem.str[j][i+1]) index |= 1; // right
 
             if (index == 0 && (i == 0 || i == (SIZE-1))) index |= 3;
             if (index == 0 && (j == 0 || j == (SIZE-1))) index |= 12;
@@ -761,11 +777,13 @@ int main(int argc, char **argv) {
               "%d,%d [%d,%d] %08x %s\n",
               x, y, screen_w, screen_h, xor, use_sightlines ? "sightlines" : "!sightlines");
 
-      Map drawme = do_map(x,y);
-      Map mask;
-      Map singles = wallify(drawme);
+      Map raw    = do_raw(x,y);
+      Map seen   = do_sight(raw);
+      Map memory = do_mem(x,y);
+      Map drawme = do_walls(raw, memory);
 
-      if (!raw) {
+#if 0
+      if (!show_raw) {
          if (use_sightlines) {
             mask = sight(drawme);
          }
@@ -773,6 +791,7 @@ int main(int argc, char **argv) {
          drawme = wallify(drawme);
          drawme = fixsingles(drawme, singles);
       }
+#endif
 
       int nx;
       int ny;
@@ -790,7 +809,7 @@ int main(int argc, char **argv) {
                }
             }
             if (use_sightlines) {
-               if (mask.str[y][x]) {
+               if (seen.str[y][x]) {
                   if (drawme.str[y][x] != ' ') {
                      utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
                   }
@@ -798,7 +817,7 @@ int main(int argc, char **argv) {
                      utf8printchar(COLOR_BLUE, COLOR_BLACK, 0xB7);
                   }
                }
-               else if (sa_get(samem, mask.offset_y + y, mask.offset_x + x)) {
+               else if (memory.str[y][x]) {
                   if (drawme.str[y][x] != ' ') {
                      utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, drawme.str[y][x]);
                   }
@@ -838,7 +857,7 @@ int main(int argc, char **argv) {
 
          case 's': use_sightlines = !use_sightlines; break;
          case 'p': phase = !phase; break;
-         case 'r': raw = !raw; break;
+         case 'r': show_raw = !show_raw; break;
 
          case 'a': xor++; break;
          case 'z': xor--; break;
