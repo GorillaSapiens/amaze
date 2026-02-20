@@ -819,7 +819,7 @@ int main(int argc, char **argv) {
                         utf8printchar(ent->fg, ent->bg, ent->unicode);
                      }
                      else {
-                        utf8printchar(COLOR_BLUE, COLOR_BLACK, 0xB7);
+                        utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, 0xB7);
                      }
                   }
                }
