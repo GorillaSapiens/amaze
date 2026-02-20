@@ -871,7 +871,7 @@ int main(int argc, char **argv) {
          case 'a': xor++; sa_delete(samem); samem = sa_new(); break;
          case 'z': xor--; sa_delete(samem); samem = sa_new(); break;
 
-         case 'q': exit(0); break;
+         case 'q': clear(); exit(0); break;
 
          // escape
          case 0x1B: getwinch(); break;
