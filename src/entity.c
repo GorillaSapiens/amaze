@@ -28,6 +28,7 @@ void ent_init(void) {
          ents[count].x = ((rand() & 0x7F) - 64) * 2 + 1;
          ents[count].y = ((rand() & 0x7F) - 64) * 2 + 1;
          ents[count].unicode = (rand() % 95) + ' ' + 1; // TODO FIX add more!
+         ents[count].remembered = false;
          count++;
       }
       fclose(f);

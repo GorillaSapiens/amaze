@@ -816,6 +816,7 @@ int main(int argc, char **argv) {
                   else {
                      Entity *ent = ent_get(drawme.offset_y + y, drawme.offset_x + x);
                      if (ent) {
+                        ent->remembered = true;
                         utf8printchar(ent->fg, ent->bg, ent->unicode);
                      }
                      else {
@@ -828,7 +829,13 @@ int main(int argc, char **argv) {
                      utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, drawme.str[y][x]);
                   }
                   else {
-                     utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, 0xB7);
+                     Entity *ent = ent_get(drawme.offset_y + y, drawme.offset_x + x);
+                     if (ent && ent->remembered) {
+                        utf8printchar(COLOR_BLACK, COLOR_BRIGHT_BLACK, ent->unicode);
+                     }
+                     else {
+                        utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, 0xB7);
+                     }
                   }
                }
                else {

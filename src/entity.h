@@ -2,6 +2,7 @@
 #define _INCLUDE_ENTITY_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef struct Entity {
    int16_t x, y;
@@ -9,6 +10,7 @@ typedef struct Entity {
    uint8_t bg;
    uint16_t unicode;
    const char *name;
+   bool remembered;
 } Entity;
 
 void ent_init(void);
