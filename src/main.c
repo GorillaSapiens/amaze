@@ -60,6 +60,16 @@ const char *help[12] = {
    "a/z inc/dec xor",
    "q to quit",
 };
+int help_width = -1;
+
+void help_init(void) {
+   for (int i = 0; i < sizeof(help) / sizeof(help[0]); i++) {
+      int len = strlen(help[i]);
+      if (len > help_width) {
+         help_width = len;
+      }
+   }
+}
 
 // very loosely based on Telengard
 
@@ -738,7 +748,7 @@ void getwinch(void) {
                screen_w = cols;
                screen_h = rows;
 
-               portal_x = screen_w * 3 / 4;
+               portal_x = screen_w - help_width - 3;
                portal_y = screen_h - 3;
                return;
             }
@@ -771,6 +781,8 @@ int main(int argc, char **argv) {
    samem = sa_new();
 
    ent_init();
+
+   help_init();
 
    signal(SIGWINCH, sigwinch_handler);
    unbuffer();
@@ -853,7 +865,7 @@ int main(int argc, char **argv) {
             }
          }
          if (j < sizeof(help) / sizeof(help[0])) {
-            cprintf(COLOR_WHITE, COLOR_BLACK,"   %s\n", help[j]);
+            cprintf(COLOR_WHITE, COLOR_BLACK,"  %s\n", help[j]);
          }
          else {
             printf("\n");

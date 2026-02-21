@@ -15,20 +15,23 @@ void ent_init(void) {
       while (fgets(buf, sizeof(buf) - 1, f)) {
          ents = realloc(ents, sizeof(Entity) * (count + 1));
          ents[count].name = strdup(buf);
-         ents[count].fg = rand() % 16;
+
+         // color selection
+         ents[count].fg = (rand() % 7) + 1; // fg is NEVER 0 (black)
          do {
-            ents[count].bg = rand() % 16;
-         } while (ents[count].bg == ents[count].fg);
-         if (ents[count].fg & 8) {
-            ents[count].fg = ents[count].fg - 8 + 60;
-         }
-         if (ents[count].bg & 8) {
-            ents[count].bg = ents[count].bg - 8 + 60;
-         }
+            ents[count].bg = rand() % 7; // bg is NEVER 7 (white)
+         } while (ents[count].bg == ents[count].fg); // bg is NEVER == fg
+         ents[count].fg += 60; // ANSI_BRIGHT
+
+         // glyph selection
+         ents[count].unicode = (rand() % 94) + ' ' + 1; // TODO FIX add more!
+
+         // position selection
          ents[count].x = ((rand() & 0x7F) - 64) * 2 + 1;
          ents[count].y = ((rand() & 0x7F) - 64) * 2 + 1;
-         ents[count].unicode = (rand() % 95) + ' ' + 1; // TODO FIX add more!
+
          ents[count].remembered = false;
+
          count++;
       }
       fclose(f);
