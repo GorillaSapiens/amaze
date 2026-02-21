@@ -836,7 +836,13 @@ int main(int argc, char **argv) {
                }
             }
             else {
-               utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
+               Entity *ent = ent_get(drawme.offset_y + y, drawme.offset_x + x);
+               if (ent) {
+                  utf8printchar(ent->fg, ent->bg, ent->unicode);
+               }
+               else {
+                  utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
+               }
             }
          }
          if (j < sizeof(help) / sizeof(help[0])) {
