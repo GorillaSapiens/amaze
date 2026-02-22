@@ -1,5 +1,6 @@
 #include "sparse_chars.h"
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -13,10 +14,11 @@ typedef struct SCEntry {
 static SCEntry *hashtable[65536] = { NULL };
 
 uint16_t ent_hash(int16_t y, int16_t x) {
-   return y ^ (((x & 0xFF) << 16) | ((x >>16) & 0xFF));
+   uint16_t ret = y ^ (((x & 0xFF) << 8) | ((x >> 8) & 0xFF));
+   return ret;
 }
 
-void sc_set(uint16_t y, uint16_t x, uint32_t unicode) {
+void sc_set(int16_t y, int16_t x, uint32_t unicode) {
    uint16_t hash = ent_hash(y, x);
 
    for (SCEntry *ptr = hashtable[hash]; ptr; ptr = ptr->next) {
@@ -34,7 +36,7 @@ void sc_set(uint16_t y, uint16_t x, uint32_t unicode) {
    hashtable[hash] = ent;
 }
 
-void sc_clr(uint16_t y, uint16_t x) {
+void sc_clr(int16_t y, int16_t x) {
    uint16_t hash = ent_hash(y, x);
 
    if (hashtable[hash] &&
@@ -46,7 +48,7 @@ void sc_clr(uint16_t y, uint16_t x) {
       return;
    }
 
-   for (SCEntry *ptr = hashtable[hash]; ptr->next; ptr = ptr->next) {
+   for (SCEntry *ptr = hashtable[hash]; ptr && ptr->next; ptr = ptr->next) {
       if (ptr->next->y == y && ptr->next->x == x) {
          SCEntry *nptr = ptr->next->next;
          free(ptr->next);
@@ -56,7 +58,7 @@ void sc_clr(uint16_t y, uint16_t x) {
    }
 }
 
-uint32_t sc_get(uint16_t y, uint16_t x) {
+uint32_t sc_get(int16_t y, int16_t x) {
    uint16_t hash = ent_hash(y, x);
 
    for (SCEntry *ptr = hashtable[hash]; ptr; ptr = ptr->next) {
@@ -67,3 +69,12 @@ uint32_t sc_get(uint16_t y, uint16_t x) {
    return 0;
 }
 
+void sc_debug(void) {
+   for (int i = 0; i < 65536; i++) {
+      if (hashtable[i]) {
+         for (SCEntry *ptr = hashtable[i]; ptr; ptr = ptr->next) {
+            printf("%d,%d %08x\n", ptr->x, ptr->y, ptr->unicode);
+         }
+      }
+   }
+}

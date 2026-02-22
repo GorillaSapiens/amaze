@@ -12,6 +12,7 @@
 
 #include "object.h"
 #include "sparse_array.h"
+#include "sparse_chars.h"
 
 #define ANSI_FORE    30
 #define ANSI_BACK    40
@@ -822,14 +823,15 @@ int main(int argc, char **argv) {
             }
             if (use_sightlines) {
                if (seen.str[y][x]) {
+                  sc_clr(drawme.offset_y + y, drawme.offset_x + x);
                   if (drawme.str[y][x] != ' ') {
                      utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
                   }
                   else {
                      Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
                      if (obj) {
-                        obj->remembered = true;
                         utf8printchar(obj->fg, obj->bg, obj->unicode);
+                        sc_set(drawme.offset_y + y, drawme.offset_x + x, obj->unicode);
                      }
                      else {
                         utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, 0xB7);
@@ -841,9 +843,9 @@ int main(int argc, char **argv) {
                      utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, drawme.str[y][x]);
                   }
                   else {
-                     Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
-                     if (obj && obj->remembered) {
-                        utf8printchar(COLOR_BLACK, COLOR_BRIGHT_BLACK, obj->unicode);
+                     uint32_t unicode = sc_get(drawme.offset_y + y, drawme.offset_x + x);
+                     if (unicode) {
+                        utf8printchar(COLOR_BLACK, COLOR_BRIGHT_BLACK, unicode);
                      }
                      else {
                         utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, 0xB7);
@@ -879,6 +881,7 @@ int main(int argc, char **argv) {
             ptr = ptr->lnext;
          } while (ptr != nobj);
       }
+      sc_debug();
 
       int dx = 0;
       int dy = 0;

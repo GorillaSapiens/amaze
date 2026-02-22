@@ -10,7 +10,6 @@ typedef struct Object {
    uint8_t bg;
    uint16_t unicode;
    const char *name;
-   bool remembered;
 
    struct Object *hnext; // next in hash bucket, do not touch
 

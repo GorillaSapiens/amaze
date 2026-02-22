@@ -8,7 +8,7 @@
 static Object *hashtable[65536] = { NULL };
 
 uint16_t obj_hash(int16_t y, int16_t x) {
-   return y ^ (((x & 0xFF) << 16) | ((x >>16) & 0xFF));
+   return y ^ (((x & 0xFF) << 8) | ((x >> 8) & 0xFF));
 }
 
 void obj_insert(Object *obj) {
@@ -85,9 +85,6 @@ void obj_init(void) {
          // position selection
          obj->x = ((rand() & 0x7F) - 64) * 2 + 1;
          obj->y = ((rand() & 0x7F) - 64) * 2 + 1;
-
-         // TODO FIX this will get removed later
-         obj->remembered = false;
 
          obj->hnext = NULL;
          obj->lnext = NULL;
