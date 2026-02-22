@@ -881,7 +881,7 @@ int main(int argc, char **argv) {
             ptr = ptr->lnext;
          } while (ptr != nobj);
       }
-      sc_debug();
+      //sc_debug();
 
       int dx = 0;
       int dy = 0;
