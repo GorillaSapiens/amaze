@@ -3,17 +3,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "entity.h"
+#include "object.h"
 
 static int count = 0;
-static Entity *ents = NULL;
+static Object *ents = NULL;
 
-void ent_init(void) {
+void obj_init(void) {
    FILE *f = fopen("things.txt", "r");
    if (f) {
       char buf[1024];
       while (fgets(buf, sizeof(buf) - 1, f)) {
-         ents = realloc(ents, sizeof(Entity) * (count + 1));
+         ents = realloc(ents, sizeof(Object) * (count + 1));
          ents[count].name = strdup(buf);
 
          // color selection
@@ -40,7 +40,7 @@ void ent_init(void) {
    ents[0].x = ents[0].y = 3;
 }
 
-Entity *ent_get(int16_t y, int16_t x) {
+Object *obj_get(int16_t y, int16_t x) {
    for (int i = 0; i < count; i++) {
       if (ents[i].x == x && ents[i].y == y) {
          return ents + i; // TODO fix what about multiple matches ???

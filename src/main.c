@@ -10,7 +10,7 @@
 #include <signal.h>
 #include <stdarg.h>
 
-#include "entity.h"
+#include "object.h"
 #include "sparse_array.h"
 
 #define ANSI_FORE    30
@@ -780,7 +780,7 @@ int main(int argc, char **argv) {
 
    samem = sa_new();
 
-   ent_init();
+   obj_init();
 
    help_init();
 
@@ -805,7 +805,7 @@ int main(int argc, char **argv) {
 
       int nx;
       int ny;
-      Entity *nent = NULL;
+      Object *nobj = NULL;
 
       for (int j = 0; j < portal_y; j++) {
          int y = j + (SIZE - portal_y) / 2;
@@ -818,7 +818,7 @@ int main(int argc, char **argv) {
                if (phase) {
                   drawme.str[y][x] = 'X';
                }
-               nent = ent_get(drawme.offset_y + y, drawme.offset_x + x);
+               nobj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
             }
             if (use_sightlines) {
                if (seen.str[y][x]) {
@@ -826,10 +826,10 @@ int main(int argc, char **argv) {
                      utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
                   }
                   else {
-                     Entity *ent = ent_get(drawme.offset_y + y, drawme.offset_x + x);
-                     if (ent) {
-                        ent->remembered = true;
-                        utf8printchar(ent->fg, ent->bg, ent->unicode);
+                     Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
+                     if (obj) {
+                        obj->remembered = true;
+                        utf8printchar(obj->fg, obj->bg, obj->unicode);
                      }
                      else {
                         utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, 0xB7);
@@ -841,9 +841,9 @@ int main(int argc, char **argv) {
                      utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, drawme.str[y][x]);
                   }
                   else {
-                     Entity *ent = ent_get(drawme.offset_y + y, drawme.offset_x + x);
-                     if (ent && ent->remembered) {
-                        utf8printchar(COLOR_BLACK, COLOR_BRIGHT_BLACK, ent->unicode);
+                     Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
+                     if (obj && obj->remembered) {
+                        utf8printchar(COLOR_BLACK, COLOR_BRIGHT_BLACK, obj->unicode);
                      }
                      else {
                         utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, 0xB7);
@@ -855,9 +855,9 @@ int main(int argc, char **argv) {
                }
             }
             else {
-               Entity *ent = ent_get(drawme.offset_y + y, drawme.offset_x + x);
-               if (ent) {
-                  utf8printchar(ent->fg, ent->bg, ent->unicode);
+               Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
+               if (obj) {
+                  utf8printchar(obj->fg, obj->bg, obj->unicode);
                }
                else {
                   utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
@@ -871,8 +871,8 @@ int main(int argc, char **argv) {
             printf("\n");
          }
       }
-      if (nent) {
-         cprintf(nent->fg, nent->bg, "%s", nent->name);
+      if (nobj) {
+         cprintf(nobj->fg, nobj->bg, "%s", nobj->name);
       }
 
       int dx = 0;

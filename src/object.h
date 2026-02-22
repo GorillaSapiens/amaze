@@ -1,19 +1,19 @@
-#ifndef _INCLUDE_ENTITY_H_
-#define _INCLUDE_ENTITY_H_
+#ifndef _INCLUDE_OBJECT_H_
+#define _INCLUDE_OBJECT_H_
 
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct Entity {
+typedef struct Object {
    int16_t x, y;
    uint8_t fg;
    uint8_t bg;
    uint16_t unicode;
    const char *name;
    bool remembered;
-} Entity;
+} Object;
 
-void ent_init(void);
-Entity *ent_get(int16_t y, int16_t x);
+void obj_init(void);
+Object *obj_get(int16_t y, int16_t x);
 
 #endif
