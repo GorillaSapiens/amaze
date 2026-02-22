@@ -821,48 +821,49 @@ int main(int argc, char **argv) {
                }
                nobj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
             }
-            if (use_sightlines) {
-               if (seen.str[y][x]) {
-                  sc_clr(drawme.offset_y + y, drawme.offset_x + x);
-                  if (drawme.str[y][x] != ' ') {
-                     utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
-                  }
-                  else {
-                     Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
-                     if (obj) {
-                        utf8printchar(obj->fg, obj->bg, obj->unicode);
-                        sc_set(drawme.offset_y + y, drawme.offset_x + x, obj->unicode);
-                     }
-                     else {
-                        utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, 0xB7);
-                     }
-                  }
-               }
-               else if (memory.str[y][x]) {
-                  if (drawme.str[y][x] != ' ') {
-                     utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, drawme.str[y][x]);
-                  }
-                  else {
-                     uint32_t unicode = sc_get(drawme.offset_y + y, drawme.offset_x + x);
-                     if (unicode) {
-                        utf8printchar(COLOR_BLACK, COLOR_BRIGHT_BLACK, unicode);
-                     }
-                     else {
-                        utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, 0xB7);
-                     }
-                  }
+
+            if (seen.str[y][x]) {
+               sc_clr(drawme.offset_y + y, drawme.offset_x + x);
+               if (drawme.str[y][x] != ' ') {
+                  utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
                }
                else {
-                  utf8printchar(COLOR_WHITE, COLOR_BLACK, ' ');
+                  Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
+                  if (obj) {
+                     utf8printchar(obj->fg, obj->bg, obj->unicode);
+                     sc_set(drawme.offset_y + y, drawme.offset_x + x, obj->unicode);
+                  }
+                  else {
+                     utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, 0xB7);
+                  }
+               }
+            }
+            else if (memory.str[y][x]) {
+               if (drawme.str[y][x] != ' ') {
+                  utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, drawme.str[y][x]);
+               }
+               else {
+                  uint32_t unicode = sc_get(drawme.offset_y + y, drawme.offset_x + x);
+                  if (unicode) {
+                     utf8printchar(COLOR_BLACK, COLOR_BRIGHT_BLACK, unicode);
+                  }
+                  else {
+                     utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, 0xB7);
+                  }
                }
             }
             else {
-               Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
-               if (obj) {
-                  utf8printchar(obj->fg, obj->bg, obj->unicode);
+               if (use_sightlines) {
+                  utf8printchar(COLOR_WHITE, COLOR_BLACK, ' ');
                }
                else {
-                  utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
+                  Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
+                  if (obj) {
+                     utf8printchar(obj->fg, obj->bg, obj->unicode);
+                  }
+                  else {
+                     utf8printchar(COLOR_WHITE, COLOR_BLACK, drawme.str[y][x]);
+                  }
                }
             }
          }
