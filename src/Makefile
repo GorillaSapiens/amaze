@@ -4,7 +4,8 @@ CFLAGS = -g -Wall
 OBJS = \
    main.o \
    object.o \
-   sparse_array.o
+   sparse_array.o \
+   sparse_chars.o
 
 all: amaze
 

@@ -8,7 +8,7 @@
 static Object *hashtable[65536] = { NULL };
 
 uint16_t obj_hash(int16_t y, int16_t x) {
-   return y ^ x;
+   return y ^ (((x & 0xFF) << 16) | ((x >>16) & 0xFF));
 }
 
 void obj_insert(Object *obj) {

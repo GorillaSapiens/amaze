@@ -451,9 +451,9 @@ void color(int color) {
 }
 
 // print a utf8 character
-void utf8printchar(unsigned char fg, unsigned char bg, unsigned int x) {
-   static unsigned char _fg = -1;
-   static unsigned char _bg = -1;
+void utf8printchar(uint8_t fg, uint8_t bg, uint32_t x) {
+   static uint8_t _fg = -1;
+   static uint8_t _bg = -1;
 
    if (fg != _fg) {
       _fg = fg;
