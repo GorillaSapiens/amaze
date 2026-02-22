@@ -11,6 +11,12 @@ typedef struct Object {
    uint16_t unicode;
    const char *name;
    bool remembered;
+
+   struct Object *hnext; // next in hash bucket, do not touch
+
+   struct Object *lnext; // next in location
+   struct Object *lprev; // prev in location
+
 } Object;
 
 void obj_init(void);

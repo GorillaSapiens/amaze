@@ -872,7 +872,12 @@ int main(int argc, char **argv) {
          }
       }
       if (nobj) {
-         cprintf(nobj->fg, nobj->bg, "%s", nobj->name);
+         Object *ptr = nobj;
+         do {
+            cprintf(ptr->fg, ptr->bg, "%s", ptr->name);
+            cprintf(COLOR_WHITE, COLOR_BLACK, "\n");
+            ptr = ptr->lnext;
+         } while (ptr != nobj);
       }
 
       int dx = 0;
