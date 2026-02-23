@@ -22,6 +22,7 @@ typedef struct Object {
 void obj_init(void);
 Object *obj_get(int16_t y, int16_t x);
 Object *obj_get_inv(void);
+int obj_get_inv_count(void);
 void obj_take(Object *obj); // moves object to inventory
 void obj_drop(Object *obj, int16_t y, int16_t x); // drops object from inventory
 

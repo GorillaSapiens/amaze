@@ -781,6 +781,7 @@ int main(int argc, char **argv) {
    int16_t x = argc > 1 ? atoi(argv[1]) : 1;
    int16_t y = argc > 2 ? atoi(argv[2]) : 1;
    Object *inventory = NULL;
+   int inventory_count = 0;
    bool inventory_flag = false;
 
    // assure we don't start in a wall
@@ -803,7 +804,8 @@ int main(int argc, char **argv) {
 
    while (1) {
       inventory = obj_get_inv();
-      inventory_flag = inventory ? false : true;
+      inventory_count = obj_get_inv_count();
+      inventory_flag = true;
 
       clear();
       cprintf(COLOR_BLACK, COLOR_BRIGHT_CYAN,
@@ -892,7 +894,10 @@ int main(int argc, char **argv) {
          }
          else if (side_mode == SIDE_INV) {
             if (inventory_flag) {
-               cprintf(COLOR_WHITE, COLOR_BLACK, "    inventory empty\n");
+               cprintf(COLOR_WHITE, COLOR_BLACK,
+                       "    %d item%s\n",
+                       inventory_count,
+                       inventory_count == 1? "" : "s");
                inventory_flag = false;
             }
             else if (inventory) {

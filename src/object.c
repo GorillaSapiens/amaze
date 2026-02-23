@@ -8,6 +8,7 @@
 
 static Object *hashtable[65536] = { NULL };
 static Object *inventory = NULL;
+static int inventory_count = 0;
 
 static uint16_t obj_hash(int16_t y, int16_t x) {
    return y ^ (((x & 0xFF) << 8) | ((x >> 8) & 0xFF));
@@ -118,6 +119,10 @@ Object *obj_get_inv(void) {
    return inventory;
 }
 
+int obj_get_inv_count(void) {
+   return inventory_count;
+}
+
 // moves object to inventory
 void obj_take(Object *obj) {
    if (!obj->in_inventory) {
@@ -127,6 +132,7 @@ void obj_take(Object *obj) {
       inventory = obj;
 
       obj->in_inventory = true;
+      inventory_count++;
    }
    else {
       // TODO FIX error handling
@@ -149,6 +155,7 @@ void obj_drop(Object *obj, int16_t y, int16_t x) {
       }
       obj->hnext = NULL;
       obj->in_inventory = false;
+      inventory_count--;
       obj->y = y;
       obj->x = x;
       obj_insert(obj);
