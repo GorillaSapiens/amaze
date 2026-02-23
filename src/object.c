@@ -6,12 +6,13 @@
 #include "object.h"
 
 static Object *hashtable[65536] = { NULL };
+static Object *inventory = NULL;
 
-uint16_t obj_hash(int16_t y, int16_t x) {
+static uint16_t obj_hash(int16_t y, int16_t x) {
    return y ^ (((x & 0xFF) << 8) | ((x >> 8) & 0xFF));
 }
 
-void obj_insert(Object *obj) {
+static void obj_insert(Object *obj) {
    uint16_t hash = obj_hash(obj->y, obj->x);
    bool found = false;
 
@@ -32,7 +33,7 @@ void obj_insert(Object *obj) {
    hashtable[hash] = obj;
 }
 
-void obj_remove(Object *obj) {
+static void obj_remove(Object *obj) {
    uint16_t hash = obj_hash(obj->y, obj->x);
 
    if (hashtable[hash] == obj) {
@@ -42,11 +43,12 @@ void obj_remove(Object *obj) {
       for (Object *ptr = hashtable[hash]; ptr->hnext; ptr = ptr->hnext) {
          if (ptr->hnext == obj) {
             ptr->hnext = obj->hnext;
-            obj->hnext = NULL;
             break;
          }
       }
    }
+
+   obj->hnext = NULL;
 
    obj->lprev->lnext = obj->lnext;
    obj->lnext->lprev = obj->lprev;
@@ -90,6 +92,8 @@ void obj_init(void) {
          obj->lnext = NULL;
          obj->lprev = NULL;
 
+         obj->in_inventory = false;
+
          obj_insert(obj);
       }
       fclose(f);
@@ -105,4 +109,48 @@ Object *obj_get(int16_t y, int16_t x) {
       }
    }
    return NULL;
+}
+
+Object *obj_get_inv(void) {
+   return inventory;
+}
+
+// moves object to inventory
+void obj_take(Object *obj) {
+   if (!obj->in_inventory) {
+      obj_remove(obj);
+
+      obj->hnext = inventory;
+      inventory = obj;
+
+      obj->in_inventory = true;
+   }
+   else {
+      // TODO FIX error handling
+   }
+}
+
+// drops object from inventory
+void obj_drop(Object *obj, int16_t y, int16_t x) {
+   if (obj->in_inventory) {
+      if (inventory == obj) {
+         inventory = obj->hnext;
+      }
+      else {
+         for (Object *ptr = inventory; ptr && ptr->hnext; ptr = ptr->hnext) {
+            if (ptr->hnext == obj) {
+               ptr->hnext = obj->hnext;
+               break;
+            }
+         }
+      }
+      obj->hnext = NULL;
+      obj->in_inventory = false;
+      obj->y = y;
+      obj->x = x;
+      obj_insert(obj);
+   }
+   else {
+      // TODO FIX error handling
+   }
 }

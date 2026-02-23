@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 typedef struct Object {
+   bool in_inventory;
    int16_t x, y;
    uint8_t fg;
    uint8_t bg;
@@ -20,5 +21,8 @@ typedef struct Object {
 
 void obj_init(void);
 Object *obj_get(int16_t y, int16_t x);
+Object *obj_get_inv(void);
+void obj_take(Object *obj); // moves object to inventory
+void obj_drop(Object *obj, int16_t y, int16_t x); // drops object from inventory
 
 #endif

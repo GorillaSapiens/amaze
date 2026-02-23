@@ -47,7 +47,7 @@ int xor = 0; //0xdeadbeef;
 SparseArray *samem = NULL;
 
 // in screen help
-const char *help[12] = {
+static const char *help[15] = {
    "Procedural maze demo.",
    "",
    "movement:",
@@ -55,13 +55,18 @@ const char *help[12] = {
    "h * l",
    "b j n",
    "",
+   ", take an object",
+   "d drop an object",
+   "",
    "s toggle sightlines",
    "p toggle phase",
    "r toggle raw",
    "a/z inc/dec xor",
    "q to quit",
 };
-int help_width = -1;
+static int help_width = -1;
+
+static char message[80] = { 0 };
 
 void help_init(void) {
    for (int i = 0; i < sizeof(help) / sizeof(help[0]); i++) {
@@ -750,7 +755,7 @@ void getwinch(void) {
                screen_h = rows;
 
                portal_x = screen_w - help_width - 3;
-               portal_y = screen_h - 3;
+               portal_y = screen_h - 4;
                return;
             }
             else if (u >= '0' && u <= '9') {
@@ -763,6 +768,26 @@ void getwinch(void) {
             }
             break;
       }
+   }
+}
+
+void take(int16_t y, int16_t x) {
+   Object *obj = obj_get(y, x);
+   if (obj) {
+      obj_take(obj);
+   }
+   else {
+      sprintf(message, "Nothing here!");
+   }
+}
+
+void drop(int16_t y, int16_t x) {
+   Object *obj = obj_get_inv();
+   if (obj) {
+      obj_drop(obj, y, x);
+   }
+   else {
+      sprintf(message, "Inventory empty!");
    }
 }
 
@@ -882,6 +907,9 @@ int main(int argc, char **argv) {
             ptr = ptr->lnext;
          } while (ptr != nobj);
       }
+      if (message[0]) {
+         cprintf(COLOR_WHITE, COLOR_BLACK, "%s\n", message);
+      }
       //sc_debug();
 
       int dx = 0;
@@ -889,14 +917,17 @@ int main(int argc, char **argv) {
 
       int u = getchar();
       switch(u) {
-         case 'k': dy--; break;
-         case 'j': dy++; break;
-         case 'h': dx--; break;
-         case 'l': dx++; break;
-         case 'y': dy--; dx--; break;
-         case 'u': dy--; dx++; break;
-         case 'b': dy++; dx--; break;
-         case 'n': dy++; dx++; break;
+         case 'k': dy--; message[0] = 0; break;
+         case 'j': dy++; message[0] = 0; break;
+         case 'h': dx--; message[0] = 0; break;
+         case 'l': dx++; message[0] = 0; break;
+         case 'y': dy--; dx--; message[0] = 0; break;
+         case 'u': dy--; dx++; message[0] = 0; break;
+         case 'b': dy++; dx--; message[0] = 0; break;
+         case 'n': dy++; dx++; message[0] = 0; break;
+
+         case ',': take(y, x); break;
+         case 'd': drop(y, x); break;
 
          case 's': use_sightlines = !use_sightlines; break;
          case 'p': phase = !phase; break;
