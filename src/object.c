@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "object.h"
+#include "ansi.h"
 
 static Object *hashtable[65536] = { NULL };
 static Object *inventory = NULL;
@@ -78,8 +79,10 @@ void obj_init(void) {
          obj->fg = (rand() % 7) + 1; // fg is NEVER 0 (black)
          do {
             obj->bg = rand() % 7; // bg is NEVER 7 (white)
-         } while (obj->bg == obj->fg); // bg is NEVER == fg
-         obj->fg += 60; // ANSI_BRIGHT
+           // bg is NEVER == fg
+         } while (obj->bg == obj->fg ||
+                  (obj->fg == COLOR_WHITE && obj->bg == COLOR_BLACK));
+         obj->fg += ANSI_BRIGHT;
 
          // glyph selection
          obj->unicode = (rand() % 94) + ' ' + 1; // TODO FIX add more!
