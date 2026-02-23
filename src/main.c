@@ -36,6 +36,9 @@
 #define COLOR_BRIGHT_CYAN    (ANSI_BRIGHT + COLOR_CYAN)
 #define COLOR_BRIGHT_WHITE   (ANSI_BRIGHT + COLOR_WHITE)
 
+#define SIDE_HELP 0
+#define SIDE_INV 1
+
 bool show_raw = false;
 bool use_sightlines = true;
 int sight_dist2 = 8; // sight distance squared
@@ -43,11 +46,12 @@ bool phase = false;
 int screen_w = 80;
 int screen_h = 21;
 int xor = 0; //0xdeadbeef;
+int side_mode = SIDE_HELP;
 
 SparseArray *samem = NULL;
 
 // in screen help
-static const char *help[15] = {
+static const char *help[17] = {
    "Procedural maze demo.",
    "",
    "movement:",
@@ -57,6 +61,8 @@ static const char *help[15] = {
    "",
    ", take an object",
    "d drop an object",
+   "i list inventory",
+   "? help (this list)",
    "",
    "s toggle sightlines",
    "p toggle phase",
@@ -795,6 +801,8 @@ void drop(int16_t y, int16_t x) {
 int main(int argc, char **argv) {
    int16_t x = argc > 1 ? atoi(argv[1]) : 1;
    int16_t y = argc > 2 ? atoi(argv[2]) : 1;
+   Object *inventory = NULL;
+   bool inventory_flag = false;
 
    // assure we don't start in a wall
    x = (x & ~1) + 1;
@@ -815,6 +823,9 @@ int main(int argc, char **argv) {
    printf("\033[18t"); // get window size
 
    while (1) {
+      inventory = obj_get_inv();
+      inventory_flag = inventory ? false : true;
+
       clear();
       cprintf(COLOR_BLACK, COLOR_BRIGHT_CYAN,
               "%d,%d [%d,%d] %08x %s\n",
@@ -892,11 +903,28 @@ int main(int argc, char **argv) {
                }
             }
          }
-         if (j < sizeof(help) / sizeof(help[0])) {
-            cprintf(COLOR_WHITE, COLOR_BLACK,"  %s\n", help[j]);
+         if (side_mode == SIDE_HELP) {
+            if (j < sizeof(help) / sizeof(help[0])) {
+               cprintf(COLOR_WHITE, COLOR_BLACK,"  %s\n", help[j]);
+            }
+            else {
+               printf("\n");
+            }
          }
-         else {
-            printf("\n");
+         else if (side_mode == SIDE_INV) {
+            if (inventory_flag) {
+               cprintf(COLOR_WHITE, COLOR_BLACK, "    inventory empty\n");
+               inventory_flag = false;
+            }
+            else if (inventory) {
+               cprintf(COLOR_WHITE, COLOR_BLACK, "  ");
+               utf8printchar(inventory->fg, inventory->bg, inventory->unicode);
+               cprintf(COLOR_WHITE, COLOR_BLACK, " %.*s\n", help_width - 1, inventory->name);
+               inventory = inventory->hnext;
+            }
+            else {
+               printf("\n");
+            }
          }
       }
       if (nobj) {
@@ -925,6 +953,9 @@ int main(int argc, char **argv) {
          case 'u': dy--; dx++; message[0] = 0; break;
          case 'b': dy++; dx--; message[0] = 0; break;
          case 'n': dy++; dx++; message[0] = 0; break;
+
+         case 'i': side_mode = SIDE_INV; break;
+         case '?': side_mode = SIDE_HELP; break;
 
          case ',': take(y, x); break;
          case 'd': drop(y, x); break;
