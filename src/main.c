@@ -754,10 +754,23 @@ void getwinch(void) {
    }
 }
 
+char tag2char(char tag) {
+   if (tag < 26) {
+      return 'a' + tag;
+   }
+   else if (tag < 52) {
+      return 'A' + (tag - 26);
+   }
+   else {
+      return '#' + (tag - 52);
+   }
+}
+
 void take(int16_t y, int16_t x) {
    Object *obj = obj_get(y, x);
    if (obj) {
       obj_take(obj);
+      sprintf(message, "taken (%c) %s", tag2char(obj->tag), obj->name);
    }
    else {
       sprintf(message, "Nothing here!");

@@ -7,29 +7,30 @@
 #include "ansi.h"
 
 static const char obj_types[] = {
- OBJ_COIN,
- OBJ_AMULET,
- OBJ_WEAPON,
- OBJ_ARMOR,
- OBJ_FOOD,
- OBJ_SCROLL,
- OBJ_BOOK,
- OBJ_POTION,
- OBJ_RING,
- OBJ_WAND,
- OBJ_TOOL,
- OBJ_GEM,
- OBJ_BOULDER,
- OBJ_BALL,
- OBJ_CHAIN,
- OBJ_VENOM,
- 0 };
+   OBJ_COIN,
+   OBJ_AMULET,
+   OBJ_WEAPON,
+   OBJ_ARMOR,
+   OBJ_FOOD,
+   OBJ_SCROLL,
+   OBJ_BOOK,
+   OBJ_POTION,
+   OBJ_RING,
+   OBJ_WAND,
+   OBJ_TOOL,
+   OBJ_GEM,
+   OBJ_BOULDER,
+   OBJ_BALL,
+   OBJ_CHAIN,
+   OBJ_VENOM,
+   0 };
 
 #define NUM_TYPES (sizeof(obj_types) - 1)
 
 static Object *hashtable[65536] = { NULL };
 static Object *inventory = NULL;
 static int inventory_count = 0;
+static uint64_t inv_assignments = 0;
 
 static uint16_t obj_hash(int16_t y, int16_t x) {
    return y ^ (((x & 0xFF) << 8) | ((x >> 8) & 0xFF));
@@ -159,6 +160,19 @@ void obj_take(Object *obj) {
 
       obj->in_inventory = true;
       inventory_count++;
+
+      if (!(inv_assignments & (1LL << obj->tag))) {
+         inv_assignments |= (1LL << obj->tag);
+      }
+      else {
+         for (int i = 0; i < (sizeof(uint64_t) * 8); i++) {
+            if (!(inv_assignments & (1LL << i))) {
+               obj->tag = i;
+               inv_assignments |= (1LL << i);
+               break;
+            }
+         }
+      }
    }
    else {
       // TODO FIX error handling
@@ -182,6 +196,7 @@ void obj_drop(Object *obj, int16_t y, int16_t x) {
       obj->hnext = NULL;
       obj->in_inventory = false;
       inventory_count--;
+      inv_assignments &= ~(1LL << obj->tag);
       obj->y = y;
       obj->x = x;
       obj_insert(obj);
