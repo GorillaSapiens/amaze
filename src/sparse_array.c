@@ -15,83 +15,77 @@ typedef struct Chunk {
 #define EMPTY_CHUNK NULL
 #define FULL_CHUNK ((Chunk *) -1)
 
-struct SparseArray {
-   Chunk *data[65536 / CHUNK_BITS][65536 / CHUNK_BITS];
-};
+static Chunk *data[65536 / CHUNK_BITS][65536 / CHUNK_BITS] = { { 0 } };
 
 #define BIN data[y / CHUNK_BITS][x / CHUNK_BITS]
 #define BASE base[y % CHUNK_BITS]
 #define BIT (((ChunkBase) 1) << (x % CHUNK_BITS))
 
-SparseArray *sa_new(void) {
-   return calloc(1, sizeof(SparseArray));
-}
-
-void sa_delete(SparseArray *sa) {
+void sa_reset(void) {
    for (int i = 0; i < 65536 / CHUNK_BITS; i++) {
       for (int j = 0; j < 65536 / CHUNK_BITS; j++) {
-         if (sa->data[i][j]) {
-            if (sa->data[i][j] != FULL_CHUNK) {
-               free(sa->data[i][j]);
+         if (data[i][j]) {
+            if (data[i][j] != FULL_CHUNK) {
+               free(data[i][j]);
             }
-            sa->data[i][j] = EMPTY_CHUNK;
+            data[i][j] = EMPTY_CHUNK;
          }
       }
    }
 }
 
-void sa_set(SparseArray *sa, uint16_t y, uint16_t x) {
-   if (sa->BIN == FULL_CHUNK) {
+void sa_set(uint16_t y, uint16_t x) {
+   if (BIN == FULL_CHUNK) {
       return; // already set
    }
 
-   if (sa->BIN == EMPTY_CHUNK) {
-      sa->BIN = calloc(1, sizeof(Chunk));
+   if (BIN == EMPTY_CHUNK) {
+      BIN = calloc(1, sizeof(Chunk));
    }
 
-   sa->BIN->BASE |= BIT;
+   BIN->BASE |= BIT;
 
    for (int i = 0; i < CHUNK_BITS; i++) {
-      if (sa->BIN->base[i] != (ChunkBase) -1) {
+      if (BIN->base[i] != (ChunkBase) -1) {
          return;
       }
    }
 
-   free(sa->BIN);
-   sa->BIN = FULL_CHUNK;
+   free(BIN);
+   BIN = FULL_CHUNK;
 }
 
-void sa_clr(SparseArray *sa, uint16_t y, uint16_t x) {
-   if (sa->BIN == EMPTY_CHUNK) {
+void sa_clr(uint16_t y, uint16_t x) {
+   if (BIN == EMPTY_CHUNK) {
       return; // already clear
    }
 
-   if (sa->BIN == FULL_CHUNK) {
-      sa->BIN = malloc(sizeof(Chunk));
-      memset(sa->BIN, 0xFF, sizeof(Chunk));
+   if (BIN == FULL_CHUNK) {
+      BIN = malloc(sizeof(Chunk));
+      memset(BIN, 0xFF, sizeof(Chunk));
    }
 
-   sa->BIN->BASE &= ~BIT;
+   BIN->BASE &= ~BIT;
 
    for (int i = 0; i < CHUNK_BITS; i++) {
-      if (sa->BIN->base[i] != 0) {
+      if (BIN->base[i] != 0) {
          return;
       }
    }
 
-   free(sa->BIN);
-   sa->BIN = EMPTY_CHUNK;
+   free(BIN);
+   BIN = EMPTY_CHUNK;
 }
 
-bool sa_get(SparseArray *sa, uint16_t y, uint16_t x) {
-   if (sa->BIN == EMPTY_CHUNK) {
+bool sa_get(uint16_t y, uint16_t x) {
+   if (BIN == EMPTY_CHUNK) {
       return false;
    }
-   else if (sa->BIN == FULL_CHUNK) {
+   else if (BIN == FULL_CHUNK) {
       return true;
    }
    else {
-      return (sa->BIN->BASE & BIT) ? true : false;
+      return (BIN->BASE & BIT) ? true : false;
    }
 }
 

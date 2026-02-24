@@ -4,12 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct SparseArray SparseArray;
-
-SparseArray *sa_new(void);
-void sa_delete(SparseArray *sa);
-void sa_set(SparseArray *sa, uint16_t y, uint16_t x);
-void sa_clr(SparseArray *sa, uint16_t y, uint16_t x);
-bool sa_get(SparseArray *sa, uint16_t y, uint16_t x);
+void sa_reset(void);
+void sa_set(uint16_t y, uint16_t x);
+void sa_clr(uint16_t y, uint16_t x);
+bool sa_get(uint16_t y, uint16_t x);
 
 #endif

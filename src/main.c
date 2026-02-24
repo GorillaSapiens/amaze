@@ -27,8 +27,6 @@ int screen_h = 21;
 int xor = 0; //0xdeadbeef;
 int side_mode = SIDE_HELP;
 
-SparseArray *samem = NULL;
-
 // in screen help
 static const char *help[17] = {
    "Procedural maze demo.",
@@ -407,7 +405,7 @@ Map do_mem(int x, int y) {
 
    for (y = 0; y < SIZE; y++) {
       for (x = 0; x < SIZE; x++) {
-         if (sa_get(samem, ret.offset_y + y, ret.offset_x + x)) {
+         if (sa_get(ret.offset_y + y, ret.offset_x + x)) {
             ret.str[y][x] = ' ';
          }
       }
@@ -629,7 +627,7 @@ Map do_sight(Map in) {
          }
 
          if (mask.str[y][x]) {
-            sa_set(samem, mask.offset_y + y, mask.offset_x + x);
+            sa_set(mask.offset_y + y, mask.offset_x + x);
          }
       }
    }
@@ -792,7 +790,7 @@ int main(int argc, char **argv) {
    init_orders();
    init_obstructs();
 
-   samem = sa_new();
+   sa_reset();
 
    obj_init();
 
@@ -948,8 +946,8 @@ int main(int argc, char **argv) {
          case 'p': phase = !phase; break;
          case 'r': show_raw = !show_raw; break;
 
-         case 'a': xor++; sa_delete(samem); samem = sa_new(); break;
-         case 'z': xor--; sa_delete(samem); samem = sa_new(); break;
+         case 'a': xor++; sa_reset(); break;
+         case 'z': xor--; sa_reset(); break;
 
          case 'q': clear(); exit(0); break;
 
