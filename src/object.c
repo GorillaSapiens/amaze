@@ -6,6 +6,27 @@
 #include "object.h"
 #include "ansi.h"
 
+static const char obj_types[] = {
+ OBJ_COIN,
+ OBJ_AMULET,
+ OBJ_WEAPON,
+ OBJ_ARMOR,
+ OBJ_FOOD,
+ OBJ_SCROLL,
+ OBJ_BOOK,
+ OBJ_POTION,
+ OBJ_RING,
+ OBJ_WAND,
+ OBJ_TOOL,
+ OBJ_GEM,
+ OBJ_BOULDER,
+ OBJ_BALL,
+ OBJ_CHAIN,
+ OBJ_VENOM,
+ 0 };
+
+#define NUM_TYPES (sizeof(obj_types) - 1)
+
 static Object *hashtable[65536] = { NULL };
 static Object *inventory = NULL;
 static int inventory_count = 0;
@@ -97,6 +118,11 @@ void obj_init(void) {
          obj->lprev = NULL;
 
          obj->in_inventory = false;
+         obj->tag = 0;
+         obj->type = obj_types[rand() % NUM_TYPES];
+         if (rand() % 2) {
+            obj->unicode = obj->type;
+         }
 
          obj_insert(obj);
       }

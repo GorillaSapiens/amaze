@@ -4,6 +4,23 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define OBJ_COIN    '$'
+#define OBJ_AMULET  '"'
+#define OBJ_WEAPON  ')'
+#define OBJ_ARMOR   '['
+#define OBJ_FOOD    '%'
+#define OBJ_SCROLL  '?'
+#define OBJ_BOOK    '+'
+#define OBJ_POTION  '!'
+#define OBJ_RING    '='
+#define OBJ_WAND    '/'
+#define OBJ_TOOL    '('
+#define OBJ_GEM     '*'
+#define OBJ_BOULDER '`'
+#define OBJ_BALL    '0'
+#define OBJ_CHAIN   '_'
+#define OBJ_VENOM   '.'
+
 typedef struct Object {
    bool in_inventory;
    int16_t x, y;
@@ -11,6 +28,9 @@ typedef struct Object {
    uint8_t bg;
    uint16_t unicode;
    const char *name;
+
+   char tag;
+   char type;
 
    struct Object *hnext; // next in hash bucket, do not touch
 
