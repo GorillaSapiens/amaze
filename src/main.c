@@ -15,9 +15,6 @@
 #include "sparse_chars.h"
 #include "ansi.h"
 
-#define SIDE_HELP 0
-#define SIDE_INV 1
-
 bool show_raw = false;
 bool use_sightlines = true;
 int sight_dist2 = 8; // sight distance squared
@@ -25,10 +22,9 @@ bool phase = false;
 int screen_w = 80;
 int screen_h = 21;
 int xor = 0; //0xdeadbeef;
-int side_mode = SIDE_HELP;
 
 // in screen help
-static const char *help[17] = {
+static const char *help[16] = {
    "Procedural maze demo.",
    "",
    "movement:",
@@ -39,7 +35,6 @@ static const char *help[17] = {
    ", take an object",
    "d drop an object",
    "i list inventory",
-   "? help (this list)",
    "",
    "s toggle sightlines",
    "p toggle phase",
@@ -777,13 +772,131 @@ void take(int16_t y, int16_t x) {
    }
 }
 
+int inv_cmp(const void *a, const void *b) {
+   const Object **oa = (const Object **) a;
+   const Object **ob = (const Object **) b;
+
+   if ((*oa)->type < (*ob)->type) {
+      return -1;
+   }
+   else if ((*oa)->type > (*ob)->type) {
+      return 1;
+   }
+   else if ((*oa)->tag < (*ob)->tag) {
+      return -1;
+   }
+   else if ((*oa)->tag > (*ob)->tag) {
+      return 1;
+   }
+   else {
+      return 0;
+   }
+}
+
+Object *inventory(const char *prompt) {
+   int inv_count = obj_get_inv_count();
+   int i = 0;
+   Object *inv[64 + 16] = { 0 };
+   int type = -1;
+   int end = inv_count;
+
+   inv[0] = obj_get_inv();
+   while (inv[i]) {
+      inv[i + 1] = inv[i]->hnext;
+      i++;
+   }
+
+   qsort(inv, inv_count, sizeof(Object *), inv_cmp);
+
+   // add gaps...
+   for (int i = 0; i < end; i++) {
+      if (inv[i]->type != type) {
+         type = inv[i]->type;
+         memmove(inv + i + 1, inv + i, sizeof(Object *) * (end - i));
+         inv[i] = NULL;
+         end++;
+      }
+   }
+
+   clear();
+   cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "%s >>\n\n", prompt);
+
+   int cols;
+
+   if (end < screen_h - 3) {
+      cols = 1;
+   }
+   else if (end / 2 < screen_h - 3) {
+      cols = 2;
+   }
+   else {
+      cols = 3;
+   }
+
+   for (int i = 0; i < (end + cols - 1) / cols; i++) {
+      for (int j = 0; j < cols; j++) {
+         int spot = j * (end + cols - 1) / cols + i;
+         if (inv[spot] == NULL && inv[spot + 1] != NULL) {
+            cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, " %-*.*s",
+                    screen_w / cols - 2,
+                    screen_w / cols - 2,
+                    obj_type_names[(int)inv[spot + 1]->type]);
+         }
+         else if (inv[spot]) {
+            cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "  %c) ",
+                    tag2char(inv[spot]->tag));
+            utf8printchar(inv[spot]->fg, inv[spot]->bg, inv[spot]->unicode);
+            cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, " %-*.*s",
+                    screen_w / cols - 8,
+                    screen_w / cols - 8,
+                    inv[spot]->name);
+         }
+         else {
+            cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "%-*.*s",
+                    screen_w / cols - 1,
+                    screen_w / cols - 1,
+                    "");
+         }
+      }
+      cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "\n");
+   }
+
+   int u = getchar();
+
+   int tag = -1;
+   if (u >= 'a' && u <= 'z') {
+      tag = u - 'a';
+   }
+   else if (u >= 'A' && u <= 'Z') {
+      tag = u - 'A' + 26;
+   }
+
+   if (tag != -1) {
+      for (Object *o = obj_get_inv(); o; o = o->hnext) {
+         if (o->tag == tag) {
+            return o;
+         }
+      }
+   }
+
+   return NULL;
+}
+
 void drop(int16_t y, int16_t x) {
    Object *obj = obj_get_inv();
+
+   if (!obj) {
+      sprintf(message, "No inventory!");
+      return;
+   }
+
+   obj = inventory("Drop what?");
+
    if (obj) {
       obj_drop(obj, y, x);
    }
    else {
-      sprintf(message, "Inventory empty!");
+      sprintf(message, "drop cancelled");
    }
 }
 
@@ -791,9 +904,6 @@ void drop(int16_t y, int16_t x) {
 int main(int argc, char **argv) {
    int16_t x = argc > 1 ? atoi(argv[1]) : 1;
    int16_t y = argc > 2 ? atoi(argv[2]) : 1;
-   Object *inventory = NULL;
-   int inventory_count = 0;
-   bool inventory_flag = false;
 
    // assure we don't start in a wall
    x = (x & ~1) + 1;
@@ -814,10 +924,6 @@ int main(int argc, char **argv) {
    printf("\033[18t"); // get window size
 
    while (1) {
-      inventory = obj_get_inv();
-      inventory_count = obj_get_inv_count();
-      inventory_flag = true;
-
       clear();
       cprintf(COLOR_BLACK, COLOR_BRIGHT_CYAN,
               "%d,%d [%d,%d] %08x %s\n",
@@ -895,31 +1001,13 @@ int main(int argc, char **argv) {
                }
             }
          }
-         if (side_mode == SIDE_HELP) {
-            if (j < sizeof(help) / sizeof(help[0])) {
-               cprintf(COLOR_WHITE, COLOR_BLACK,"  %s\n", help[j]);
-            }
-            else {
-               printf("\n");
-            }
+
+         // do "help"
+         if (j < sizeof(help) / sizeof(help[0])) {
+            cprintf(COLOR_WHITE, COLOR_BLACK,"  %s\n", help[j]);
          }
-         else if (side_mode == SIDE_INV) {
-            if (inventory_flag) {
-               cprintf(COLOR_WHITE, COLOR_BLACK,
-                       "    %d item%s\n",
-                       inventory_count,
-                       inventory_count == 1? "" : "s");
-               inventory_flag = false;
-            }
-            else if (inventory) {
-               cprintf(COLOR_WHITE, COLOR_BLACK, "  ");
-               utf8printchar(inventory->fg, inventory->bg, inventory->unicode);
-               cprintf(COLOR_WHITE, COLOR_BLACK, " %.*s\n", help_width - 1, inventory->name);
-               inventory = inventory->hnext;
-            }
-            else {
-               printf("\n");
-            }
+         else {
+            printf("\n");
          }
       }
       if (nobj) {
@@ -949,8 +1037,7 @@ int main(int argc, char **argv) {
          case 'b': dy++; dx--; message[0] = 0; break;
          case 'n': dy++; dx++; message[0] = 0; break;
 
-         case 'i': side_mode = SIDE_INV; break;
-         case '?': side_mode = SIDE_HELP; break;
+         case 'i': inventory("inventory"); break;
 
          case ',': take(y, x); break;
          case 'd': drop(y, x); break;

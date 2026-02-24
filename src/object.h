@@ -21,6 +21,9 @@
 #define OBJ_CHAIN   '_'
 #define OBJ_VENOM   '.'
 
+extern const char obj_types[];
+extern const char *obj_type_names[];
+
 typedef struct Object {
    bool in_inventory;
    int16_t x, y;

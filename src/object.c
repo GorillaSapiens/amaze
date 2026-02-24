@@ -6,7 +6,7 @@
 #include "object.h"
 #include "ansi.h"
 
-static const char obj_types[] = {
+const char obj_types[] = {
    OBJ_COIN,
    OBJ_AMULET,
    OBJ_WEAPON,
@@ -24,6 +24,25 @@ static const char obj_types[] = {
    OBJ_CHAIN,
    OBJ_VENOM,
    0 };
+
+const char *obj_type_names[] = {
+   "Coins",
+   "Amulets",
+   "Weapons",
+   "Armor",
+   "Food",
+   "Scrolls",
+   "Books",
+   "Potions",
+   "Rings",
+   "Wands",
+   "Tools",
+   "Gems",
+   "Boulders",
+   "Balls",
+   "Chains",
+   "Venom"
+};
 
 #define NUM_TYPES (sizeof(obj_types) - 1)
 
@@ -120,10 +139,8 @@ void obj_init(void) {
 
          obj->in_inventory = false;
          obj->tag = 0;
-         obj->type = obj_types[rand() % NUM_TYPES];
-         if (rand() % 2) {
-            obj->unicode = obj->type;
-         }
+         obj->type = rand() % NUM_TYPES;
+         obj->unicode = obj_types[(int)obj->type]; // TODO come to a decision here!
 
          obj_insert(obj);
       }
