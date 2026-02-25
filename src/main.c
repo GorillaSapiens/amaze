@@ -1068,11 +1068,13 @@ int main(int argc, char **argv) {
       }
       if (nobj) {
          Object *ptr = nobj;
-         do {
+         if (nobj->lnext != nobj) {
+            cprintf(COLOR_WHITE, COLOR_BLACK, "There are many objects here.\n");
+         }
+         else {
             cprintf(ptr->fg, ptr->bg, "%s", ptr->name);
             cprintf(COLOR_WHITE, COLOR_BLACK, "\n");
-            ptr = ptr->lnext;
-         } while (ptr != nobj);
+         }
       }
       if (message[0]) {
          cprintf(COLOR_WHITE, COLOR_BLACK, "%s\n", message);
