@@ -6,23 +6,23 @@
 #include "object.h"
 #include "ansi.h"
 
-const char obj_types[] = {
-   OBJ_COIN,
-   OBJ_AMULET,
-   OBJ_WEAPON,
-   OBJ_ARMOR,
-   OBJ_FOOD,
-   OBJ_SCROLL,
-   OBJ_BOOK,
-   OBJ_POTION,
-   OBJ_RING,
-   OBJ_WAND,
-   OBJ_TOOL,
-   OBJ_GEM,
-   OBJ_BOULDER,
-   OBJ_BALL,
-   OBJ_CHAIN,
-   OBJ_VENOM,
+const char obj_type_glyphs[] = {
+   OBJ_COIN_GLYPH,
+   OBJ_AMULET_GLYPH,
+   OBJ_WEAPON_GLYPH,
+   OBJ_ARMOR_GLYPH,
+   OBJ_FOOD_GLYPH,
+   OBJ_SCROLL_GLYPH,
+   OBJ_BOOK_GLYPH,
+   OBJ_POTION_GLYPH,
+   OBJ_RING_GLYPH,
+   OBJ_WAND_GLYPH,
+   OBJ_TOOL_GLYPH,
+   OBJ_GEM_GLYPH,
+   OBJ_BOULDER_GLYPH,
+   OBJ_BALL_GLYPH,
+   OBJ_CHAIN_GLYPH,
+   OBJ_VENOM_GLYPH,
    0 };
 
 const char *obj_type_names[] = {
@@ -44,7 +44,7 @@ const char *obj_type_names[] = {
    "Venom"
 };
 
-#define NUM_TYPES (sizeof(obj_types) - 1)
+#define NUM_TYPES (sizeof(obj_type_glyphs) - 1)
 
 static Object *hashtable[65536] = { NULL };
 static Object *inventory = NULL;
@@ -140,7 +140,7 @@ void obj_init(void) {
          obj->in_inventory = false;
          obj->tag = 0;
          obj->type = rand() % NUM_TYPES;
-         obj->unicode = obj_types[(int)obj->type]; // TODO come to a decision here!
+         obj->unicode = obj_type_glyphs[(int)obj->type]; // TODO come to a decision here!
 
          obj_insert(obj);
       }

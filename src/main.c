@@ -749,7 +749,7 @@ void getwinch(void) {
    }
 }
 
-char tag2char(char tag) {
+char tag2char(uint8_t tag) {
    if (tag < 26) {
       return 'a' + tag;
    }
@@ -761,14 +761,18 @@ char tag2char(char tag) {
    }
 }
 
-void take(int16_t y, int16_t x) {
-   Object *obj = obj_get(y, x);
-   if (obj) {
-      obj_take(obj);
-      sprintf(message, "taken (%c) %s", tag2char(obj->tag), obj->name);
+uint8_t char2tag(char c) {
+   if (c >= 'a' && c <= 'z') {
+      return c - 'a';
+   }
+   else if (c >= 'A' && c <= 'Z') {
+      return c - 'A' + 26;
+   }
+   else if (c >= '#' && c <= '&') {
+      return c - '#' + 52;
    }
    else {
-      sprintf(message, "Nothing here!");
+      return -1;
    }
 }
 
@@ -793,20 +797,45 @@ int inv_cmp(const void *a, const void *b) {
    }
 }
 
-Object *inventory(const char *prompt) {
-   int inv_count = obj_get_inv_count();
-   int i = 0;
+Object *inventory(const char *prompt, int mask, bool is_inv, Object *start) {
    Object *inv[64 + 16] = { 0 };
+   int8_t spottags[64 + 16];
    int type = -1;
-   int end = inv_count;
+   int end = 0;
 
-   inv[0] = obj_get_inv();
-   while (inv[i]) {
-      inv[i + 1] = inv[i]->hnext;
-      i++;
+   // populate inv array, so we can sort it later
+   Object *tmp = start;
+   if (is_inv) {
+      while (tmp) {
+         if (mask & (1 << tmp->type)) {
+            inv[end++] = tmp;
+         }
+         tmp = tmp->hnext;
+      }
+   }
+   else if (start) {
+      do {
+         if (mask & (1 << tmp->type)) {
+            inv[end++] = tmp;
+            // TODO FIX handle cases with too many objects
+         }
+         tmp = tmp->lnext;
+      } while (tmp != start);
    }
 
-   qsort(inv, inv_count, sizeof(Object *), inv_cmp);
+   // nothing added ???
+   if (end == 0) {
+      if (is_inv) {
+         sprintf(message, "No inventory!");
+      }
+      else {
+         sprintf(message, "Nothing here!");
+      }
+      return NULL;
+   }
+
+   // sort it
+   qsort(inv, end, sizeof(Object *), inv_cmp);
 
    // add gaps...
    for (int i = 0; i < end; i++) {
@@ -818,6 +847,22 @@ Object *inventory(const char *prompt) {
       }
    }
 
+   // for !is_inv, populate spottags
+   if (!is_inv) {
+      int8_t spottag = 0;
+      for (int i = 0; i < end; i++) {
+         if (inv[i] != NULL) {
+            spottags[i] = spottag;
+            spottag++;
+            // TODO FIX handle cases with too many objects
+         }
+         else {
+            spottags[i] = -1;
+         }
+      }
+   }
+
+   // draw selection screen
    clear();
    cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "%s >>\n\n", prompt);
 
@@ -844,7 +889,7 @@ Object *inventory(const char *prompt) {
          }
          else if (inv[spot]) {
             cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "  %c) ",
-                    tag2char(inv[spot]->tag));
+                    is_inv ? tag2char(inv[spot]->tag) : tag2char(spottags[spot]));
             utf8printchar(inv[spot]->fg, inv[spot]->bg, inv[spot]->unicode);
             cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, " %-*.*s",
                     screen_w / cols - 8,
@@ -863,18 +908,12 @@ Object *inventory(const char *prompt) {
 
    int u = getchar();
 
-   int tag = -1;
-   if (u >= 'a' && u <= 'z') {
-      tag = u - 'a';
-   }
-   else if (u >= 'A' && u <= 'Z') {
-      tag = u - 'A' + 26;
-   }
+   int tag = char2tag(u);
 
    if (tag != -1) {
-      for (Object *o = obj_get_inv(); o; o = o->hnext) {
-         if (o->tag == tag) {
-            return o;
+      for (int i = 0; i < end; i++) {
+         if (inv[i] && ((is_inv && inv[i]->tag == tag) || (!is_inv && spottags[i] == tag))) {
+            return inv[i];
          }
       }
    }
@@ -885,18 +924,35 @@ Object *inventory(const char *prompt) {
 void drop(int16_t y, int16_t x) {
    Object *obj = obj_get_inv();
 
-   if (!obj) {
-      sprintf(message, "No inventory!");
-      return;
-   }
-
-   obj = inventory("Drop what?");
+   message[0] = 0;
+   obj = inventory("Drop what?", OBJ_ANY_MASK, true, obj_get_inv());
 
    if (obj) {
       obj_drop(obj, y, x);
    }
    else {
-      sprintf(message, "drop cancelled");
+      if (!message[0]) {
+         sprintf(message, "drop cancelled");
+      }
+   }
+}
+
+void take(int16_t y, int16_t x) {
+   message[0] = 0;
+   Object *obj = obj_get(y,x);
+
+   if (obj->lnext != obj) {
+      obj = inventory("Take what?", OBJ_ANY_MASK, false, obj);
+   }
+
+   if (obj) {
+      obj_take(obj);
+      sprintf(message, "taken (%c) %s", tag2char(obj->tag), obj->name);
+   }
+   else {
+      if (!message[0]) {
+         sprintf(message, "Nothing here!");
+      }
    }
 }
 
@@ -1037,7 +1093,7 @@ int main(int argc, char **argv) {
          case 'b': dy++; dx--; message[0] = 0; break;
          case 'n': dy++; dx++; message[0] = 0; break;
 
-         case 'i': inventory("inventory"); break;
+         case 'i': inventory("inventory", OBJ_ANY_MASK, true, obj_get_inv()); break;
 
          case ',': take(y, x); break;
          case 'd': drop(y, x); break;
