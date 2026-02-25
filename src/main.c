@@ -810,7 +810,7 @@ Object *inventory(const char *prompt, int mask, bool is_inv, Object *start) {
          if (mask & (1 << tmp->type)) {
             inv[end++] = tmp;
          }
-         tmp = tmp->hnext;
+         tmp = tmp->link;
       }
    }
    else if (start) {
@@ -819,7 +819,7 @@ Object *inventory(const char *prompt, int mask, bool is_inv, Object *start) {
             inv[end++] = tmp;
             // TODO FIX handle cases with too many objects
          }
-         tmp = tmp->lnext;
+         tmp = tmp->next;
       } while (tmp != start);
    }
 
@@ -941,7 +941,7 @@ void take(int16_t y, int16_t x) {
    message[0] = 0;
    Object *obj = obj_get(y,x);
 
-   if (obj->lnext != obj) {
+   if (obj->next != obj) {
       obj = inventory("Take what?", OBJ_ANY_MASK, false, obj);
    }
 
@@ -1068,7 +1068,7 @@ int main(int argc, char **argv) {
       }
       if (nobj) {
          Object *ptr = nobj;
-         if (nobj->lnext != nobj) {
+         if (nobj->next != nobj) {
             cprintf(COLOR_WHITE, COLOR_BLACK, "There are many objects here.\n");
          }
          else {

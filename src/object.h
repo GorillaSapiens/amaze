@@ -70,10 +70,12 @@ typedef struct Object {
    char tag;
    char type;
 
-   struct Object *hnext; // next in hash bucket, do not touch
+   struct Object *link; // next in hash bucket, do not touch
 
-   struct Object *lnext; // next in location
-   struct Object *lprev; // prev in location
+   // next/prev pointers for location.  NULL if in main inventory.
+   // this *could* be same x,y location, **OR** inside containers
+   struct Object *next;
+   struct Object *prev;
 
 } Object;
 

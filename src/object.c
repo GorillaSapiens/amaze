@@ -55,47 +55,47 @@ static uint16_t obj_hash(int16_t y, int16_t x) {
    return y ^ (((x & 0xFF) << 8) | ((x >> 8) & 0xFF));
 }
 
+static void remove_link(Object **ptr, Object *removee) {
+   if (!ptr) return;
+
+   while (*ptr && *ptr != removee) {
+      ptr = &((*ptr)->link);
+   }
+   if (*ptr && *ptr == removee) {
+      *ptr = removee->link;
+      removee->link = NULL;
+   }
+}
+
 static void obj_insert(Object *obj) {
    uint16_t hash = obj_hash(obj->y, obj->x);
    bool found = false;
 
-   for (Object *ptr = hashtable[hash]; ptr; ptr = ptr->hnext) {
+   for (Object *ptr = hashtable[hash]; ptr; ptr = ptr->link) {
       if (ptr->x == obj->x && ptr->y == obj->y) {
-         obj->lprev = ptr->lprev;
-         obj->lnext = ptr;
-         ptr->lprev = obj;
-         obj->lprev->lnext = obj;
+         obj->prev = ptr->prev;
+         obj->next = ptr;
+         ptr->prev = obj;
+         obj->prev->next = obj;
          found = true;
          break;
       }
    }
    if (!found) {
-      obj->lprev = obj->lnext = obj;
+      obj->prev = obj->next = obj;
    }
-   obj->hnext = hashtable[hash];
+   obj->link = hashtable[hash];
    hashtable[hash] = obj;
 }
 
 static void obj_remove(Object *obj) {
    uint16_t hash = obj_hash(obj->y, obj->x);
 
-   if (hashtable[hash] == obj) {
-      hashtable[hash] = obj->hnext;
-   }
-   else {
-      for (Object *ptr = hashtable[hash]; ptr->hnext; ptr = ptr->hnext) {
-         if (ptr->hnext == obj) {
-            ptr->hnext = obj->hnext;
-            break;
-         }
-      }
-   }
+   remove_link(hashtable + hash, obj);
 
-   obj->hnext = NULL;
-
-   obj->lprev->lnext = obj->lnext;
-   obj->lnext->lprev = obj->lprev;
-   obj->lnext = obj->lprev = NULL;
+   obj->prev->next = obj->next;
+   obj->next->prev = obj->prev;
+   obj->next = obj->prev = NULL;
 }
 
 void obj_init(void) {
@@ -133,9 +133,9 @@ void obj_init(void) {
          obj->x = ((rand() & 0x7F) - 64) * 2 + 1;
          obj->y = ((rand() & 0x7F) - 64) * 2 + 1;
 
-         obj->hnext = NULL;
-         obj->lnext = NULL;
-         obj->lprev = NULL;
+         obj->link = NULL;
+         obj->next = NULL;
+         obj->prev = NULL;
 
          obj->in_inventory = false;
          obj->tag = 0;
@@ -151,7 +151,7 @@ void obj_init(void) {
 Object *obj_get(int16_t y, int16_t x) {
    uint16_t hash = obj_hash(y, x);
 
-   for (Object *ptr = hashtable[hash]; ptr; ptr = ptr->hnext) {
+   for (Object *ptr = hashtable[hash]; ptr; ptr = ptr->link) {
       if (ptr->x == x && ptr->y == y) {
          return ptr;
       }
@@ -172,7 +172,7 @@ void obj_take(Object *obj) {
    if (!obj->in_inventory) {
       obj_remove(obj);
 
-      obj->hnext = inventory;
+      obj->link = inventory;
       inventory = obj;
 
       obj->in_inventory = true;
@@ -200,17 +200,17 @@ void obj_take(Object *obj) {
 void obj_drop(Object *obj, int16_t y, int16_t x) {
    if (obj->in_inventory) {
       if (inventory == obj) {
-         inventory = obj->hnext;
+         inventory = obj->link;
       }
       else {
-         for (Object *ptr = inventory; ptr && ptr->hnext; ptr = ptr->hnext) {
-            if (ptr->hnext == obj) {
-               ptr->hnext = obj->hnext;
+         for (Object *ptr = inventory; ptr && ptr->link; ptr = ptr->link) {
+            if (ptr->link == obj) {
+               ptr->link = obj->link;
                break;
             }
          }
       }
-      obj->hnext = NULL;
+      obj->link = NULL;
       obj->in_inventory = false;
       inventory_count--;
       inv_assignments &= ~(1LL << obj->tag);
