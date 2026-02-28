@@ -6,6 +6,9 @@
 
 #include "binding.h"
 
+typedef struct Object Object;
+typedef struct Binding Binding;
+
 #define OBJ_COIN    0
 #define OBJ_AMULET  1
 #define OBJ_WEAPON  2
@@ -92,6 +95,6 @@ int obj_get_inv_count(void);
 void obj_take(Object *obj); // moves object to inventory
 void obj_drop(Object *obj, int16_t y, int16_t x); // drops object from inventory
 
-Binding *obj_bind(Object *, char, void (*)(Object *), size_t);
+Binding *obj_bind(Object *, char, void (*)(Binding *), size_t);
 
 #endif

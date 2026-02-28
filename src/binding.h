@@ -4,10 +4,12 @@
 #include "object.h"
 
 typedef struct Object Object;
+typedef struct Binding Binding;
 
 typedef struct Binding {
    char action;           // 'a'pply, 'r'ead, 'q'uaff, etc...
-   void (*fn)(Object *obj);
+   Object *obj;
+   void (*fn)(Binding *binding);
    struct Binding *next;
 } Binding;
 

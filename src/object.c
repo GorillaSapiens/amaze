@@ -223,7 +223,7 @@ void obj_drop(Object *obj, int16_t y, int16_t x) {
    }
 }
 
-Binding *obj_bind(Object *obj, char action, void (*fn)(Object *), size_t size) {
+Binding *obj_bind(Object *obj, char action, void (*fn)(Binding *), size_t size) {
    Binding *ret = NULL;
    if (!obj) {
       return NULL;
@@ -234,6 +234,7 @@ Binding *obj_bind(Object *obj, char action, void (*fn)(Object *), size_t size) {
    ret = (Binding *) malloc(size);
    if (ret) {
       ret->action   = action;
+      ret->obj      = obj;
       ret->fn       = fn;
       ret->next     = obj->bindings;
       obj->bindings = ret;
