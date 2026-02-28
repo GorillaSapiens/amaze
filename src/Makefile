@@ -10,6 +10,8 @@ DEPFLAGS += -MMD -MP
 
 OBJS = \
    main.o \
+   ansi.o \
+   chooselist.o \
    object.o \
    sparse_array.o \
    sparse_chars.o
