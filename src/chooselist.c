@@ -49,7 +49,7 @@ void cl_add_text(Chooselist *cl, const char *text, char tag) {
    cl->count++;
 }
 
-void cl_display(Chooselist *cl, int height, int width) {
+void cl_display(Chooselist *cl) {
 }
 
 void cl_delete(Chooselist *cl) {
