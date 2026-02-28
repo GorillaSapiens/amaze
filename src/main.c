@@ -1,19 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <termios.h>
-#include <unistd.h>
 #include <math.h>
-#include <float.h>
-#include <signal.h>
-#include <stdarg.h>
 
 #include "object.h"
 #include "sparse_array.h"
 #include "sparse_chars.h"
 #include "ansi.h"
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 bool show_raw = false;
 bool use_sightlines = true;
@@ -44,8 +41,8 @@ static int help_width = -1;
 
 static char message[80] = { 0 };
 
-void help_init(void) {
-   for (int i = 0; i < sizeof(help) / sizeof(help[0]); i++) {
+static void help_init(void) {
+   for (size_t i = 0; i < sizeof(help) / sizeof(help[0]); i++) {
       int len = strlen(help[i]);
       if (len > help_width) {
          help_width = len;
@@ -82,7 +79,7 @@ ObstExt obstructs[SIZE][SIZE];
 #define OBST_R (1.00 / 2.0) // obstruction radius
 
 // initialize obstruction maps
-void init_obstructs(void) {
+static void init_obstructs(void) {
    int cx = SIZE / 2;
    int cy = SIZE / 2;
 
@@ -101,13 +98,13 @@ void init_obstructs(void) {
 
 typedef struct { double lo, hi; } Range;
 
-int cmp_range(const void *a, const void *b)
+static int cmp_range(const void *a, const void *b)
 {
    const Range *A = a, *B = b;
    return (A->lo < B->lo) ? -1 : (A->lo > B->lo);
 }
 
-size_t merge_ranges(Range *ranges, size_t n)
+static size_t merge_ranges(Range *ranges, size_t n)
 {
    if (n == 0) return 0;
    qsort(ranges, n, sizeof *ranges, cmp_range);
@@ -134,7 +131,7 @@ typedef struct Order {
 #define ORDERSIZE ((SIZE / 2) * ((SIZE / 2) + 1) / 2)
 Order orders[ORDERSIZE];
 
-int cmp_orders(const void *a, const void *b) {
+static int cmp_orders(const void *a, const void *b) {
    const Order *oa = a;
    const Order *ob = b;
 
@@ -143,7 +140,7 @@ int cmp_orders(const void *a, const void *b) {
    return 0;
 }
 
-void init_orders(void) {
+static void init_orders(void) {
    int n = 0;
    for (int u = 0; u < SIZE / 2; u++) {
       for (int v = 0; v <= u; v++) {
@@ -156,7 +153,7 @@ void init_orders(void) {
    qsort(orders, n, sizeof(*orders), cmp_orders);
 }
 
-int posrand(int y, int x) {
+static int posrand(int y, int x) {
    // Double, double toil and trouble...
    int seed = x & 0xFFFF;
    seed <<= 16;
@@ -167,7 +164,7 @@ int posrand(int y, int x) {
    return rand();
 }
 
-Map repair_voids(Map ret) {
+static Map repair_voids(Map ret) {
    Map visited;
 
    memset(&visited, 0, sizeof(visited));
@@ -250,7 +247,7 @@ Map repair_voids(Map ret) {
    return ret;
 }
 
-Map repair_pillars(Map ret) {
+static Map repair_pillars(Map ret) {
    Map pillars;
    int count = -1;
 
@@ -325,7 +322,7 @@ Map repair_pillars(Map ret) {
 }
 
 // generate a raw map based on player position
-Map do_raw(int x, int y) {
+static Map do_raw(int x, int y) {
    Map ret;
    ret.offset_x = x - SIZE/2;
    ret.offset_y = y - SIZE/2;
@@ -390,7 +387,7 @@ Map do_raw(int x, int y) {
    return ret;
 }
 
-Map do_mem(int x, int y) {
+static Map do_mem(int x, int y) {
    Map ret;
    memset(&ret, 0, sizeof(ret));
    ret.offset_x = x - SIZE/2;
@@ -407,7 +404,7 @@ Map do_mem(int x, int y) {
 }
 
 // line drawing characters
-int linechars[16] = {
+static int linechars[16] = {
    // udlr
    0x25AA,  // 0000 // a square
    0x2501,  // 0001
@@ -431,7 +428,7 @@ static inline int sign(int x) {
    return (x > 0) - (x < 0);
 }
 
-bool obscured(Map *mask, Map *in, int y, int x, int *count, Range **ranges) {
+static bool obscured(Map *mask, Map *in, int y, int x, int *count, Range **ranges) {
    double ctheta = obstructs[y][x].ctheta;
    double dtheta = obstructs[y][x].dtheta;
 
@@ -472,7 +469,7 @@ bool obscured(Map *mask, Map *in, int y, int x, int *count, Range **ranges) {
    return false;
 }
 
-Map do_sight(Map in) {
+static Map do_sight(Map in) {
    int atx = SIZE / 2;
    int aty = SIZE / 2;
 
@@ -517,7 +514,7 @@ Map do_sight(Map in) {
    return mask;
 }
 
-Map do_walls(Map raw, Map mem) {
+static Map do_walls(Map raw, Map mem) {
    Map ret;
    ret.offset_y = raw.offset_y;
    ret.offset_x = raw.offset_x;
@@ -544,18 +541,7 @@ Map do_walls(Map raw, Map mem) {
    return ret;
 }
 
-Map fixsingles(Map a, Map b) {
-   for (int y = 0; y < SIZE; y++) {
-      for (int x = 0; x < SIZE; x++) {
-         if (a.str[y][x] == linechars[0]) {
-            a.str[y][x] = b.str[y][x];
-         }
-      }
-   }
-   return a;
-}
-
-char tag2char(uint8_t tag) {
+static char tag2char(uint8_t tag) {
    if (tag < 26) {
       return 'a' + tag;
    }
@@ -567,7 +553,7 @@ char tag2char(uint8_t tag) {
    }
 }
 
-uint8_t char2tag(char c) {
+static uint8_t char2tag(char c) {
    if (c >= 'a' && c <= 'z') {
       return c - 'a';
    }
@@ -582,9 +568,9 @@ uint8_t char2tag(char c) {
    }
 }
 
-int inv_cmp(const void *a, const void *b) {
-   const Object **oa = (const Object **) a;
-   const Object **ob = (const Object **) b;
+static int inv_cmp(const void *a, const void *b) {
+   const Object * const *oa = (const Object * const *) a;
+   const Object * const *ob = (const Object * const *) b;
 
    if ((*oa)->type < (*ob)->type) {
       return -1;
@@ -603,7 +589,7 @@ int inv_cmp(const void *a, const void *b) {
    }
 }
 
-Object *inventory(const char *prompt, int mask, bool is_inv, Object *start) {
+static Object *inventory(const char *prompt, int mask, bool is_inv, Object *start) {
    Object *inv[64 + 16] = { 0 };
    int8_t spottags[64 + 16];
    int type = -1;
@@ -727,7 +713,7 @@ Object *inventory(const char *prompt, int mask, bool is_inv, Object *start) {
    return NULL;
 }
 
-void drop(int16_t y, int16_t x) {
+static void drop(int16_t y, int16_t x) {
    Object *obj = obj_get_inv();
 
    message[0] = 0;
@@ -743,7 +729,7 @@ void drop(int16_t y, int16_t x) {
    }
 }
 
-void take(int16_t y, int16_t x) {
+static void take(int16_t y, int16_t x) {
    message[0] = 0;
    Object *obj = obj_get(y,x);
 
@@ -803,41 +789,41 @@ int main(int argc, char **argv) {
       Object *nobj = NULL;
 
       for (int j = 0; j < portal_y; j++) {
-         int y = j + (SIZE - portal_y) / 2;
+         int sy = j + (SIZE - portal_y) / 2;
          for (int i = 0; i < portal_x; i++) {
-            int x = i + (SIZE - portal_x) / 2;
+            int sx = i + (SIZE - portal_x) / 2;
 
-            if (drawme.str[y][x] == '@') {
-               nx = x;
-               ny = y;
+            if (drawme.str[sy][sx] == '@') {
+               nx = sx;
+               ny = sy;
                if (phase) {
-                  drawme.str[y][x] = 'X';
+                  drawme.str[sy][sx] = 'X';
                }
-               nobj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
+               nobj = obj_get(drawme.offset_y + sy, drawme.offset_x + sx);
             }
 
-            if (seen.str[y][x]) {
-               sc_clr(drawme.offset_y + y, drawme.offset_x + x);
-               if (drawme.str[y][x] != ' ') {
-                  utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[y][x]);
+            if (seen.str[sy][sx]) {
+               sc_clr(drawme.offset_y + sy, drawme.offset_x + sx);
+               if (drawme.str[sy][sx] != ' ') {
+                  utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, drawme.str[sy][sx]);
                }
                else {
-                  Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
+                  Object *obj = obj_get(drawme.offset_y + sy, drawme.offset_x + sx);
                   if (obj) {
                      utf8printchar(obj->fg, obj->bg, obj->unicode);
-                     sc_set(drawme.offset_y + y, drawme.offset_x + x, obj->unicode);
+                     sc_set(drawme.offset_y + sy, drawme.offset_x + sx, obj->unicode);
                   }
                   else {
                      utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, 0xB7);
                   }
                }
             }
-            else if (memory.str[y][x]) {
-               if (drawme.str[y][x] != ' ') {
-                  utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, drawme.str[y][x]);
+            else if (memory.str[sy][sx]) {
+               if (drawme.str[sy][sx] != ' ') {
+                  utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, drawme.str[sy][sx]);
                }
                else {
-                  uint32_t unicode = sc_get(drawme.offset_y + y, drawme.offset_x + x);
+                  uint32_t unicode = sc_get(drawme.offset_y + sy, drawme.offset_x + sx);
                   if (unicode) {
                      utf8printchar(COLOR_BLACK, COLOR_BRIGHT_BLACK, unicode);
                   }
@@ -851,19 +837,19 @@ int main(int argc, char **argv) {
                   utf8printchar(COLOR_WHITE, COLOR_BLACK, ' ');
                }
                else {
-                  Object *obj = obj_get(drawme.offset_y + y, drawme.offset_x + x);
+                  Object *obj = obj_get(drawme.offset_y + sy, drawme.offset_x + sx);
                   if (obj) {
                      utf8printchar(obj->fg, obj->bg, obj->unicode);
                   }
                   else {
-                     utf8printchar(COLOR_WHITE, COLOR_BLACK, drawme.str[y][x]);
+                     utf8printchar(COLOR_WHITE, COLOR_BLACK, drawme.str[sy][sx]);
                   }
                }
             }
          }
 
          // do "help"
-         if (j < sizeof(help) / sizeof(help[0])) {
+         if ((size_t) j < sizeof(help) / sizeof(help[0])) {
             cprintf(COLOR_WHITE, COLOR_BLACK,"  %s\n", help[j]);
          }
          else {

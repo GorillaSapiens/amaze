@@ -2,6 +2,10 @@ CC = gcc
 
 # enable all warnings
 CFLAGS = -Wall
+CFLAGS += -std=c23 -Wall -Wextra -Wpedantic \
+          -Wstrict-prototypes -Wmissing-prototypes \
+          -Wshadow -Wpointer-arith -Wcast-qual \
+          -Wformat=2 -Wundef
 # enable debugging
 CFLAGS += -g
 

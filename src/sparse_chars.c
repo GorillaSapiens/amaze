@@ -13,7 +13,7 @@ typedef struct SCEntry {
 
 static SCEntry *hashtable[65536] = { NULL };
 
-uint16_t ent_hash(int16_t y, int16_t x) {
+static uint16_t ent_hash(int16_t y, int16_t x) {
    uint16_t ret = y ^ (((x & 0xFF) << 8) | ((x >> 8) & 0xFF));
    return ret;
 }

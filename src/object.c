@@ -182,7 +182,7 @@ void obj_take(Object *obj) {
          inv_assignments |= (1LL << obj->tag);
       }
       else {
-         for (int i = 0; i < (sizeof(uint64_t) * 8); i++) {
+         for (size_t i = 0; i < (sizeof(uint64_t) * 8); i++) {
             if (!(inv_assignments & (1LL << i))) {
                obj->tag = i;
                inv_assignments |= (1LL << i);

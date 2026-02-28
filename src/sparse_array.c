@@ -22,8 +22,8 @@ static Chunk *data[65536 / CHUNK_BITS][65536 / CHUNK_BITS] = { { 0 } };
 #define BIT (((ChunkBase) 1) << (x % CHUNK_BITS))
 
 void sa_reset(void) {
-   for (int i = 0; i < 65536 / CHUNK_BITS; i++) {
-      for (int j = 0; j < 65536 / CHUNK_BITS; j++) {
+   for (size_t i = 0; i < 65536 / CHUNK_BITS; i++) {
+      for (size_t j = 0; j < 65536 / CHUNK_BITS; j++) {
          if (data[i][j]) {
             if (data[i][j] != FULL_CHUNK) {
                free(data[i][j]);
@@ -45,7 +45,7 @@ void sa_set(uint16_t y, uint16_t x) {
 
    BIN->BASE |= BIT;
 
-   for (int i = 0; i < CHUNK_BITS; i++) {
+   for (size_t i = 0; i < CHUNK_BITS; i++) {
       if (BIN->base[i] != (ChunkBase) -1) {
          return;
       }
@@ -67,7 +67,7 @@ void sa_clr(uint16_t y, uint16_t x) {
 
    BIN->BASE &= ~BIT;
 
-   for (int i = 0; i < CHUNK_BITS; i++) {
+   for (size_t i = 0; i < CHUNK_BITS; i++) {
       if (BIN->base[i] != 0) {
          return;
       }

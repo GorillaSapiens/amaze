@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "ansi.h"
 #include "chooselist.h"
 
 #define TYPE_TEXT 0
@@ -12,12 +13,12 @@ typedef struct ChooselistItem {
    char tag;
    union {
       Object *obj;
-      const char *text;
+      char *text;
    };
 } ChooselistItem;
 
 typedef struct Chooselist {
-   const char *prompt;
+   char *prompt;
    void (*fn)(Object *obj, char tag);
    int count;
    ChooselistItem *items;

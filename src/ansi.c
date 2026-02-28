@@ -1,12 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <termios.h>
 #include <unistd.h>
-#include <math.h>
-#include <float.h>
 #include <signal.h>
 #include <stdarg.h>
 

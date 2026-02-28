@@ -1,6 +1,8 @@
 #ifndef _INCLUDE_ANSI_H_
 #define _INCLUDE_ANSI_H_
 
+#include <stdint.h>
+
 #define ANSI_FORE    30
 #define ANSI_BACK    40
 #define ANSI_BRIGHT  60
