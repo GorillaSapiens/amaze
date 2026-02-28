@@ -222,3 +222,21 @@ void obj_drop(Object *obj, int16_t y, int16_t x) {
       // TODO FIX error handling
    }
 }
+
+Binding *obj_bind(Object *obj, char action, void (*fn)(Object *), size_t size) {
+   Binding *ret = NULL;
+   if (!obj) {
+      return NULL;
+   }
+   if (size < sizeof(Binding)) {
+      size = sizeof(Binding);
+   }
+   ret = (Binding *) malloc(size);
+   if (ret) {
+      ret->action   = action;
+      ret->fn       = fn;
+      ret->next     = obj->bindings;
+      obj->bindings = ret;
+   }
+   return ret;
+}

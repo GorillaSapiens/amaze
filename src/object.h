@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "binding.h"
+
 #define OBJ_COIN    0
 #define OBJ_AMULET  1
 #define OBJ_WEAPON  2
@@ -70,6 +72,8 @@ typedef struct Object {
    char tag;
    char type;
 
+   Binding *bindings;
+
    // next in hash bucket, do not touch
    struct Object *link;
 
@@ -87,5 +91,7 @@ Object *obj_get_inv(void);
 int obj_get_inv_count(void);
 void obj_take(Object *obj); // moves object to inventory
 void obj_drop(Object *obj, int16_t y, int16_t x); // drops object from inventory
+
+Binding *obj_bind(Object *, char, void (*)(Object *), size_t);
 
 #endif
