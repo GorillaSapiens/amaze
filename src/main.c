@@ -7,10 +7,14 @@
 #include "sparse_array.h"
 #include "sparse_chars.h"
 #include "ansi.h"
+#include "chooselist.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+int16_t hero_x;
+int16_t hero_y;
 
 bool show_raw = false;
 bool use_sightlines = true;
@@ -541,34 +545,7 @@ static Map do_walls(Map raw, Map mem) {
    return ret;
 }
 
-static char tag2char(uint8_t tag) {
-   if (tag < 26) {
-      return 'a' + tag;
-   }
-   else if (tag < 52) {
-      return 'A' + (tag - 26);
-   }
-   else {
-      return '#' + (tag - 52);
-   }
-}
-
-static uint8_t char2tag(char c) {
-   if (c >= 'a' && c <= 'z') {
-      return c - 'a';
-   }
-   else if (c >= 'A' && c <= 'Z') {
-      return c - 'A' + 26;
-   }
-   else if (c >= '#' && c <= '&') {
-      return c - '#' + 52;
-   }
-   else {
-      return -1;
-   }
-}
-
-static int inv_cmp(const void *a, const void *b) {
+static int obj_cmp(const void *a, const void *b) {
    const Object * const *oa = (const Object * const *) a;
    const Object * const *ob = (const Object * const *) b;
 
@@ -589,138 +566,100 @@ static int inv_cmp(const void *a, const void *b) {
    }
 }
 
-static Object *inventory(const char *prompt, int mask, bool is_inv, Object *start) {
-   Object *inv[64 + 16] = { 0 };
-   int8_t spottags[64 + 16];
+static void inventory(const char *prompt,
+                      void (*fn)(Object *, char),
+                      const char *empty,
+                      int mask,
+                      Object *start) {
+   if (!start) {
+      sprintf(message, "%s", empty);
+      return;
+   }
+
+   int count = 0;
+   for (Object *tmp = start; tmp; tmp = tmp->link) {
+      if (mask & (1 << tmp->type)) {
+         count++;
+      }
+   }
+
+   if (count == 0) {
+      sprintf(message, "%s", empty);
+      return;
+   }
+
+   Object *objs[count];
+   int entries = 0;
+   for (Object *tmp = start; tmp; tmp = tmp->link) {
+      if (mask & (1 << tmp->type)) {
+         objs[entries++] = tmp;
+      }
+   }
+
+   qsort(objs, entries, sizeof(Object *), obj_cmp);
+
+   Chooselist *cl = cl_new(prompt, fn);
    int type = -1;
-   int end = 0;
-
-   // populate inv array, so we can sort it later
-   Object *tmp = start;
-   if (is_inv) {
-      while (tmp) {
-         if (mask & (1 << tmp->type)) {
-            inv[end++] = tmp;
-         }
-         tmp = tmp->link;
+   for (int i = 0; i < entries; i++) {
+      if (type != objs[i]->type) {
+         type = objs[i]->type;
+         cl_add_text(cl, "", -1);
+         cl_add_text(cl, obj_type_names[type], -1);
       }
+      cl_add_obj(cl, objs[i], objs[i]->tag);
    }
-   else if (start) {
-      do {
-         if (mask & (1 << tmp->type)) {
-            inv[end++] = tmp;
-            // TODO FIX handle cases with too many objects
-         }
-         tmp = tmp->next;
-      } while (tmp != start);
-   }
-
-   // nothing added ???
-   if (end == 0) {
-      if (is_inv) {
-         sprintf(message, "No inventory!");
-      }
-      else {
-         sprintf(message, "Nothing here!");
-      }
-      return NULL;
-   }
-
-   // sort it
-   qsort(inv, end, sizeof(Object *), inv_cmp);
-
-   // add gaps...
-   for (int i = 0; i < end; i++) {
-      if (inv[i]->type != type) {
-         type = inv[i]->type;
-         memmove(inv + i + 1, inv + i, sizeof(Object *) * (end - i));
-         inv[i] = NULL;
-         end++;
-      }
-   }
-
-   // for !is_inv, populate spottags
-   if (!is_inv) {
-      int8_t spottag = 0;
-      for (int i = 0; i < end; i++) {
-         if (inv[i] != NULL) {
-            spottags[i] = spottag;
-            spottag++;
-            // TODO FIX handle cases with too many objects
-         }
-         else {
-            spottags[i] = -1;
-         }
-      }
-   }
-
-   // draw selection screen
-   clear();
-   cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "%s >>\n\n", prompt);
-
-   int cols;
-
-   if (end < screen_h - 3) {
-      cols = 1;
-   }
-   else if (end / 2 < screen_h - 3) {
-      cols = 2;
-   }
-   else {
-      cols = 3;
-   }
-
-   for (int i = 0; i < (end + cols - 1) / cols; i++) {
-      for (int j = 0; j < cols; j++) {
-         int spot = j * (end + cols - 1) / cols + i;
-         if (inv[spot] == NULL && inv[spot + 1] != NULL) {
-            cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, " %-*.*s",
-                    screen_w / cols - 2,
-                    screen_w / cols - 2,
-                    obj_type_names[(int)inv[spot + 1]->type]);
-         }
-         else if (inv[spot]) {
-            cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "  %c) ",
-                    is_inv ? tag2char(inv[spot]->tag) : tag2char(spottags[spot]));
-            utf8printchar(inv[spot]->fg, inv[spot]->bg, inv[spot]->unicode);
-            cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, " %-*.*s",
-                    screen_w / cols - 8,
-                    screen_w / cols - 8,
-                    inv[spot]->name);
-         }
-         else {
-            cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "%-*.*s",
-                    screen_w / cols - 1,
-                    screen_w / cols - 1,
-                    "");
-         }
-      }
-      cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "\n");
-   }
-
-   int u = getchar();
-
-   int tag = char2tag(u);
-
-   if (tag != -1) {
-      for (int i = 0; i < end; i++) {
-         if (inv[i] && ((is_inv && inv[i]->tag == tag) || (!is_inv && spottags[i] == tag))) {
-            return inv[i];
-         }
-      }
-   }
-
-   return NULL;
+   cl_display(cl);
+   cl_delete(cl);
 }
 
-static void drop(int16_t y, int16_t x) {
-   Object *obj = obj_get_inv();
+static void here(const char *prompt,
+                 void (*fn)(Object *, char),
+                 const char *empty,
+                 Object *start) {
+   if (!start) {
+      sprintf(message, "%s", empty);
+      return;
+   }
 
-   message[0] = 0;
-   obj = inventory("Drop what?", OBJ_ANY_MASK, true, obj_get_inv());
+   int count = 0;
+   Object *tmp = start;
+   do {
+      count++;
+      tmp = tmp->next;
+   } while (tmp != start);
 
+   if (count == 0) {
+      sprintf(message, "%s", empty);
+      return;
+   }
+
+   Object *objs[count];
+   int entries = 0;
+   tmp = start;
+   do {
+      objs[entries++] = tmp;
+      tmp = tmp->next;
+   } while (tmp != start);
+
+   qsort(objs, entries, sizeof(Object *), obj_cmp);
+
+   Chooselist *cl = cl_new(prompt, fn);
+   int type = -1;
+   for (int i = 0; i < entries; i++) {
+      if (type != objs[i]->type) {
+         type = objs[i]->type;
+         cl_add_text(cl, "", -1);
+         cl_add_text(cl, obj_type_names[type], -1);
+      }
+      cl_add_obj(cl, objs[i], i);
+   }
+   cl_display(cl);
+   cl_delete(cl);
+}
+
+static void drop_fn(Object *obj, char) {
    if (obj) {
-      obj_drop(obj, y, x);
+      obj_drop(obj, hero_y, hero_x);
    }
    else {
       if (!message[0]) {
@@ -729,33 +668,44 @@ static void drop(int16_t y, int16_t x) {
    }
 }
 
-static void take(int16_t y, int16_t x) {
+static void drop(void) {
    message[0] = 0;
-   Object *obj = obj_get(y,x);
+   inventory("Drop what?", drop_fn, "nothing to drop!", OBJ_ANY_MASK, obj_get_inv());
+}
 
-   if (obj->next != obj) {
-      obj = inventory("Take what?", OBJ_ANY_MASK, false, obj);
-   }
-
+static void take_fn(Object *obj, char tag) {
    if (obj) {
+      obj_take(obj);
+      sprintf(message, "taken (%c) %s", tag2char(tag), obj->name);
+   }
+}
+
+static void take(void) {
+   message[0] = 0;
+   Object *obj = obj_get(hero_y, hero_x);
+
+   if (!obj) {
+      if (!message[0]) {
+         sprintf(message, "nothing here!");
+      }
+   }
+   else if (obj->next == obj) {
       obj_take(obj);
       sprintf(message, "taken (%c) %s", tag2char(obj->tag), obj->name);
    }
    else {
-      if (!message[0]) {
-         sprintf(message, "Nothing here!");
-      }
+      here("Take what?", take_fn, "nothing here!", obj);
    }
 }
 
 // our entry point
 int main(int argc, char **argv) {
-   int16_t x = argc > 1 ? atoi(argv[1]) : 1;
-   int16_t y = argc > 2 ? atoi(argv[2]) : 1;
+   hero_x = argc > 1 ? atoi(argv[1]) : 1;
+   hero_y = argc > 2 ? atoi(argv[2]) : 1;
 
    // assure we don't start in a wall
-   x = (x & ~1) + 1;
-   y = (y & ~1) + 1;
+   hero_x = (hero_x & ~1) + 1;
+   hero_y = (hero_y & ~1) + 1;
 
    // initialize our obstruction maps
    init_orders();
@@ -773,11 +723,14 @@ int main(int argc, char **argv) {
       clear();
       cprintf(COLOR_BLACK, COLOR_BRIGHT_CYAN,
               "%d,%d [%d,%d] %08x %s\n",
-              x, y, screen_w, screen_h, xor, use_sightlines ? "sightlines" : "!sightlines");
+              hero_x, hero_y,
+              screen_w, screen_h,
+              xor,
+              use_sightlines ? "sightlines" : "!sightlines");
 
-      Map raw    = do_raw(x,y);
+      Map raw    = do_raw(hero_x, hero_y);
       Map seen   = do_sight(raw);
-      Map memory = do_mem(x,y);
+      Map memory = do_mem(hero_x, hero_y);
       Map drawme = do_walls(raw, memory);
 
       if (show_raw) {
@@ -885,10 +838,14 @@ int main(int argc, char **argv) {
          case 'b': dy++; dx--; message[0] = 0; break;
          case 'n': dy++; dx++; message[0] = 0; break;
 
-         case 'i': inventory("inventory", OBJ_ANY_MASK, true, obj_get_inv()); break;
+         case 'i': inventory("inventory",
+                             NULL,
+                             "no inventory!",
+                             OBJ_ANY_MASK,
+                             obj_get_inv()); break;
 
-         case ',': take(y, x); break;
-         case 'd': drop(y, x); break;
+         case ',': take(); break;
+         case 'd': drop(); break;
 
          case 's': use_sightlines = !use_sightlines; break;
          case 'p': phase = !phase; break;
@@ -904,8 +861,8 @@ int main(int argc, char **argv) {
       }
 
       if (drawme.str[ny+dy][nx+dx] == ' ' || phase) {
-         x += dx;
-         y += dy;
+         hero_x += dx;
+         hero_y += dy;
       }
    }
 }

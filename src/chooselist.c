@@ -50,6 +50,49 @@ void cl_add_text(Chooselist *cl, const char *text, char tag) {
 }
 
 void cl_display(Chooselist *cl) {
+   int lines = screen_h - 3;
+   int columns = (cl->count + lines - 1) / lines;
+   int width = screen_w / columns;
+
+   clear();
+   cprintf(COLOR_WHITE, COLOR_BLACK, "%s >>\n", cl->prompt);
+
+   lines = (cl->count + columns - 1) / columns;
+   for (int line = 0; line < lines; line++) {
+      for (int column = 0; column < columns; column++) {
+         int i = lines * column + line;
+         if (i < cl->count) {
+            if (cl->items[i].type == TYPE_TEXT) {
+               if (cl->items[i].tag != -1) {
+                  cprintf(COLOR_WHITE, COLOR_BLACK,
+                        "  %c) %-*.*s", tag2char(cl->items[i].tag),
+                        width - 5, width - 5,
+                        cl->items[i].text ? cl->items[i].text : "");
+               }
+               else {
+                  cprintf(COLOR_WHITE, COLOR_BLACK,
+                        " %-*.*s",
+                        width - 1, width - 1,
+                        cl->items[i].text ? cl->items[i].text : "");
+               }
+            }
+            else { // TYPE_OBJECT
+               cprintf(COLOR_WHITE, COLOR_BLACK,
+                     "  %c) %-*.*s", tag2char(cl->items[i].tag),
+                     width - 5, width - 5,
+                     cl->items[i].obj->name);
+            }
+         }
+      }
+      printf("\n");
+   }
+
+   int u = getchar();
+   for (int i = 0; i < cl->count; i++) {
+      if (u == tag2char(cl->items[i].tag)) {
+         cl->fn(cl->items[i].obj, u);
+      }
+   }
 }
 
 void cl_delete(Chooselist *cl) {

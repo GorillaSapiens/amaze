@@ -61,6 +61,8 @@ typedef struct Binding Binding;
 #define OBJ_VENOM_MASK   (1 << OBJ_VENOM)
 #define OBJ_ANY_MASK     (-1)
 
+#define tag2char(x) (((x) < 26) ? ('a' + (x)) : (((x) < 52) ? ((x) - 26 + 'A') : ((x) - 52 + '#')))
+
 extern const char obj_type_glyphs[];
 extern const char *obj_type_names[];
 
@@ -77,7 +79,7 @@ typedef struct Object {
 
    Binding *bindings;
 
-   // next in hash bucket, do not touch
+   // next in hash bucket OR inventory, do not touch
    struct Object *link;
 
    // next/prev pointers for location.
