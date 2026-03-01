@@ -8,6 +8,7 @@
 #include "sparse_chars.h"
 #include "ansi.h"
 #include "chooselist.h"
+#include "messages.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -42,8 +43,6 @@ static const char *help[16] = {
    "q to quit",
 };
 static int help_width = -1;
-
-static char message[80] = { 0 };
 
 static void help_init(void) {
    for (size_t i = 0; i < sizeof(help) / sizeof(help[0]); i++) {
@@ -572,7 +571,7 @@ static void inventory(const char *prompt,
                       int mask,
                       Object *start) {
    if (!start) {
-      sprintf(message, "%s", empty);
+      msg_printf("%s", empty);
       return;
    }
 
@@ -584,7 +583,7 @@ static void inventory(const char *prompt,
    }
 
    if (count == 0) {
-      sprintf(message, "%s", empty);
+      msg_printf("%s", empty);
       return;
    }
 
@@ -617,7 +616,7 @@ static void here(const char *prompt,
                  const char *empty,
                  Object *start) {
    if (!start) {
-      sprintf(message, "%s", empty);
+      msg_printf("%s", empty);
       return;
    }
 
@@ -629,7 +628,7 @@ static void here(const char *prompt,
    } while (tmp != start);
 
    if (count == 0) {
-      sprintf(message, "%s", empty);
+      msg_printf("%s", empty);
       return;
    }
 
@@ -662,36 +661,30 @@ static void drop_fn(Object *obj, char) {
       obj_drop(obj, hero_y, hero_x);
    }
    else {
-      if (!message[0]) {
-         sprintf(message, "drop cancelled");
-      }
+      msg_printf("drop cancelled");
    }
 }
 
 static void drop(void) {
-   message[0] = 0;
    inventory("Drop what?", drop_fn, "nothing to drop!", OBJ_ANY_MASK, obj_get_inv());
 }
 
 static void take_fn(Object *obj, char tag) {
    if (obj) {
       obj_take(obj);
-      sprintf(message, "taken (%c) %s", tag2char(tag), obj->name);
+      msg_printf("taken (%c) %s", tag2char(tag), obj->name);
    }
 }
 
 static void take(void) {
-   message[0] = 0;
    Object *obj = obj_get(hero_y, hero_x);
 
    if (!obj) {
-      if (!message[0]) {
-         sprintf(message, "nothing here!");
-      }
+      msg_printf("nothing here!");
    }
    else if (obj->next == obj) {
       obj_take(obj);
-      sprintf(message, "taken (%c) %s", tag2char(obj->tag), obj->name);
+      msg_printf("taken (%c) %s", tag2char(obj->tag), obj->name);
    }
    else {
       here("Take what?", take_fn, "nothing here!", obj);
@@ -819,8 +812,11 @@ int main(int argc, char **argv) {
             cprintf(COLOR_WHITE, COLOR_BLACK, "\n");
          }
       }
-      if (message[0]) {
+
+      char *message = msg_next();
+      if (message) {
          cprintf(COLOR_WHITE, COLOR_BLACK, "%s\n", message);
+         free(message);
       }
       //sc_debug();
 
@@ -829,14 +825,14 @@ int main(int argc, char **argv) {
 
       int u = getchar();
       switch(u) {
-         case 'k': dy--; message[0] = 0; break;
-         case 'j': dy++; message[0] = 0; break;
-         case 'h': dx--; message[0] = 0; break;
-         case 'l': dx++; message[0] = 0; break;
-         case 'y': dy--; dx--; message[0] = 0; break;
-         case 'u': dy--; dx++; message[0] = 0; break;
-         case 'b': dy++; dx--; message[0] = 0; break;
-         case 'n': dy++; dx++; message[0] = 0; break;
+         case 'k': dy--; break;
+         case 'j': dy++; break;
+         case 'h': dx--; break;
+         case 'l': dx++; break;
+         case 'y': dy--; dx--; break;
+         case 'u': dy--; dx++; break;
+         case 'b': dy++; dx--; break;
+         case 'n': dy++; dx++; break;
 
          case 'i': inventory("inventory",
                              NULL,

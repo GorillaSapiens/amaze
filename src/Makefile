@@ -16,6 +16,7 @@ OBJS = \
    main.o \
    ansi.o \
    chooselist.o \
+   messages.o \
    object.o \
    sparse_array.o \
    sparse_chars.o
