@@ -170,6 +170,9 @@ int obj_get_inv_count(void) {
 // moves object to inventory
 void obj_take(Object *obj) {
    if (!obj->in_inventory) {
+      int16_t y = obj->y; // we might need to drop it
+      int16_t x = obj->x; // if inventory is full
+
       obj_remove(obj);
 
       obj->link = inventory;
@@ -182,12 +185,18 @@ void obj_take(Object *obj) {
          inv_assignments |= (1LL << obj->tag);
       }
       else {
-         for (size_t i = 0; i < (sizeof(uint64_t) * 8); i++) {
+         size_t i;
+         for (i = 0; i < (sizeof(uint64_t) * 8); i++) {
             if (!(inv_assignments & (1LL << i))) {
                obj->tag = i;
                inv_assignments |= (1LL << i);
                break;
             }
+         }
+         if (i == (sizeof(uint64_t) * 8)) {
+            // nope !!!
+            // TODO FIX display a messahe of some kind
+            obj_drop(obj, y, x);
          }
       }
    }

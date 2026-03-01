@@ -65,21 +65,21 @@ void cl_display(Chooselist *cl) {
             if (cl->items[i].type == TYPE_TEXT) {
                if (cl->items[i].tag != -1) {
                   cprintf(COLOR_WHITE, COLOR_BLACK,
-                        "  %c) %-*.*s", tag2char(cl->items[i].tag),
-                        width - 5, width - 5,
+                        "  %c) %-*.*s  ", tag2char(cl->items[i].tag),
+                        width - 7, width - 7,
                         cl->items[i].text ? cl->items[i].text : "");
                }
                else {
                   cprintf(COLOR_WHITE, COLOR_BLACK,
-                        " %-*.*s",
-                        width - 1, width - 1,
+                        " %-*.*s  ",
+                        width - 3, width - 3,
                         cl->items[i].text ? cl->items[i].text : "");
                }
             }
             else { // TYPE_OBJECT
                cprintf(COLOR_WHITE, COLOR_BLACK,
-                     "  %c) %-*.*s", tag2char(cl->items[i].tag),
-                     width - 5, width - 5,
+                     "  %c) %-*.*s  ", tag2char(cl->items[i].tag),
+                     width - 7, width - 7,
                      cl->items[i].obj->name);
             }
          }
