@@ -9,6 +9,8 @@
 #include "ansi.h"
 #include "chooselist.h"
 #include "messages.h"
+#include "binding.h"
+#include "mprintf.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -24,7 +26,7 @@ bool phase = false;
 int xor = 0; //0xdeadbeef;
 
 // in screen help
-static const char *help[16] = {
+static const char *help[22] = {
    "Procedural maze demo.",
    "",
    "movement:",
@@ -36,11 +38,17 @@ static const char *help[16] = {
    "d drop an object",
    "i list inventory",
    "",
+   "a apply (use)",
+   "q quaff (drink)",
+   "r read",
+   "w wear",
+   "W unwear (take off)",
+   "",
    "s toggle sightlines",
    "p toggle phase",
-   "r toggle raw",
-   "a/z inc/dec xor",
-   "q to quit",
+   "* toggle raw",
+   "+/- inc/dec xor",
+   "# to quit",
 };
 static int help_width = -1;
 
@@ -691,6 +699,84 @@ static void take(void) {
    }
 }
 
+static int pending_action;
+
+static void action_fn(Object *obj, char) {
+   Binding *bind;
+
+   for (bind = obj->bindings; bind; bind = bind->next) {
+      if (bind->action == pending_action) {
+         break;
+      }
+   }
+
+   if (bind) {
+      bind->fn(bind);
+   }
+   else {
+      msg_printf("internal binding error!");
+   }
+}
+
+static void do_action(int action) {
+   pending_action = action;
+
+   Object *start = obj_get_inv();
+
+   if (!start) {
+      msg_printf("Whatever you say, Diogenes.");
+      return;
+   }
+
+   int count = 0;
+   bool flag = true;
+   for (Object *tmp = start; flag && tmp; tmp = tmp->link) {
+      for (Binding *bind = tmp->bindings; bind; bind = bind->next) {
+         if (bind->action == action) {
+            count++;
+            flag = false;
+            break;
+         }
+      }
+   }
+
+   if (count == 0) {
+      msg_printf("You have nothing to %s", action2verb(action));
+      return;
+   }
+
+   Object *objs[count];
+   int entries = 0;
+   flag = true;
+   for (Object *tmp = start; flag && tmp; tmp = tmp->link) {
+      for (Binding *bind = tmp->bindings; bind; bind = bind->next) {
+         if (bind->action == action) {
+            objs[entries++] = tmp;
+            flag = false;
+            break;
+         }
+      }
+   }
+
+   qsort(objs, entries, sizeof(Object *), obj_cmp);
+
+   char *prompt = mprintf("What do you want to %s?", action2verb(action));
+
+   Chooselist *cl = cl_new(prompt, action_fn);
+   int type = -1;
+   for (int i = 0; i < entries; i++) {
+      if (type != objs[i]->type) {
+         type = objs[i]->type;
+         cl_add_text(cl, "", -1);
+         cl_add_text(cl, obj_type_names[type], -1);
+      }
+      cl_add_obj(cl, objs[i], objs[i]->tag);
+   }
+   cl_display(cl);
+   cl_delete(cl);
+   free(prompt);
+}
+
 // our entry point
 int main(int argc, char **argv) {
    hero_x = argc > 1 ? atoi(argv[1]) : 1;
@@ -845,12 +931,20 @@ int main(int argc, char **argv) {
 
          case 's': use_sightlines = !use_sightlines; break;
          case 'p': phase = !phase; break;
-         case 'r': show_raw = !show_raw; break;
+         case '*': show_raw = !show_raw; break;
 
-         case 'a': xor++; sa_reset(); break;
-         case 'z': xor--; sa_reset(); break;
+         case '+': xor++; sa_reset(); break;
+         case '-': xor--; sa_reset(); break;
 
-         case 'q': clear(); exit(0); break;
+         case ACTION_APPLY:
+         case ACTION_QUAFF:
+         case ACTION_READ:
+         case ACTION_WEAR:
+         case ACTION_UNWEAR:
+            do_action(u);
+            break;
+
+         case '#': clear(); exit(0); break;
 
          // escape
          case 0x1B: getwinch(); break;

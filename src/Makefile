@@ -15,8 +15,10 @@ DEPFLAGS += -MMD -MP
 OBJS = \
    main.o \
    ansi.o \
+   binding.o \
    chooselist.o \
    messages.o \
+   mprintf.o \
    object.o \
    sparse_array.o \
    sparse_chars.o

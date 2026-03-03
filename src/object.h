@@ -97,6 +97,6 @@ int obj_get_inv_count(void);
 void obj_take(Object *obj); // moves object to inventory
 void obj_drop(Object *obj, int16_t y, int16_t x); // drops object from inventory
 
-Binding *obj_bind(Object *, char, void (*)(Binding *), size_t);
+Binding *obj_bind(Object *, char, const char *, void (*)(Binding *), size_t);
 
 #endif
