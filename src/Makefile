@@ -1,8 +1,9 @@
-CC = g++
+CC = gcc
 
 # enable all warnings
 CFLAGS = -Wall
-CFLAGS += -Wall -Wextra -Wpedantic \
+CFLAGS += -std=c23 -Wall -Wextra -Wpedantic \
+          -Wstrict-prototypes -Wmissing-prototypes \
           -Wshadow -Wpointer-arith -Wcast-qual \
           -Wformat=2 -Wundef
 # enable debugging
@@ -29,10 +30,10 @@ all: amaze
 amaze: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ -lm
 
-%.o: %.cc
+%.o: %.c
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
-%.d: %.cc
+%.d: %.c
 	$(CC) $(CFLAGS) -MM -MP -MT $(@:.d=.o) -MF $@ $<
 
 .PHONY: depend

@@ -23,7 +23,7 @@ bool show_raw = false;
 bool use_sightlines = true;
 int sight_dist2 = 8; // sight distance squared
 bool phase = false;
-int pos_xor = 0; //0xdeadbeef;
+int xor = 0; //0xdeadbeef;
 
 // in screen help
 static const char *help[20] = {
@@ -109,7 +109,7 @@ typedef struct { double lo, hi; } Range;
 
 static int cmp_range(const void *a, const void *b)
 {
-   const Range *A = (const Range *) a, *B = (const Range *) b;
+   const Range *A = a, *B = b;
    return (A->lo < B->lo) ? -1 : (A->lo > B->lo);
 }
 
@@ -141,8 +141,8 @@ typedef struct Order {
 Order orders[ORDERSIZE];
 
 static int cmp_orders(const void *a, const void *b) {
-   const Order *oa = (const Order *) a;
-   const Order *ob = (const Order *) b;
+   const Order *oa = a;
+   const Order *ob = b;
 
    if (oa->d2 < ob->d2) return -1;
    if (oa->d2 > ob->d2) return  1;
@@ -167,7 +167,7 @@ static int posrand(int y, int x) {
    int seed = x & 0xFFFF;
    seed <<= 16;
    seed += y & 0xFFFF;
-   seed ^= pos_xor;
+   seed ^= xor;
    srand(seed);
 
    return rand();
@@ -593,7 +593,7 @@ static void inventory(const char *prompt,
       return;
    }
 
-   Object **objs = (Object **) malloc(sizeof(Object *) * count);
+   Object *objs[count];
    int entries = 0;
    for (Object *tmp = start; tmp; tmp = tmp->link) {
       if (mask & (1 << tmp->type)) {
@@ -638,7 +638,7 @@ static void here(const char *prompt,
       return;
    }
 
-   Object **objs = (Object **) malloc(sizeof(Object *) * count);
+   Object *objs[count];
    int entries = 0;
    tmp = start;
    do {
@@ -743,7 +743,7 @@ static void do_action(int action) {
       return;
    }
 
-   Object **objs = (Object **) malloc(sizeof(Object *) * count);
+   Object *objs[count];
    int entries = 0;
    flag = true;
    for (Object *tmp = start; flag && tmp; tmp = tmp->link) {
@@ -802,7 +802,7 @@ int main(int argc, char **argv) {
               "%d,%d [%d,%d] %08x %s\n",
               hero_x, hero_y,
               screen_w, screen_h,
-              pos_xor,
+              xor,
               use_sightlines ? "sightlines" : "!sightlines");
 
       Map raw    = do_raw(hero_x, hero_y);
@@ -931,8 +931,8 @@ int main(int argc, char **argv) {
          case 'p': phase = !phase; break;
          case '*': show_raw = !show_raw; break;
 
-         case '+': pos_xor++; sa_reset(); break;
-         case '-': pos_xor--; sa_reset(); break;
+         case '+': xor++; sa_reset(); break;
+         case '-': xor--; sa_reset(); break;
 
          case ACTION_APPLY:
          case ACTION_QUAFF:

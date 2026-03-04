@@ -158,7 +158,7 @@ int cprintf(unsigned char fg, unsigned char bg, const char *fmt, ...) {
    }
 
    // Allocate (+1 for null terminator)
-   buffer = tmp = (char *) malloc(len + 1);
+   buffer = tmp = malloc(len + 1);
    if (!buffer)
    {
       va_end(ap_copy);
