@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #include "binding.h"
+#include "bigbits.h"
 
 typedef struct Object Object;
 typedef struct Binding Binding;
@@ -73,6 +74,7 @@ typedef struct Object {
    uint8_t bg;
    uint16_t unicode;
    const char *name;
+   Bigbits flags;
 
    char tag;
    char type;
