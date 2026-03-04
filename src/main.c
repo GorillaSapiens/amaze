@@ -26,10 +26,7 @@ bool phase = false;
 int xor = 0; //0xdeadbeef;
 
 // in screen help
-static const char *help[22] = {
-   "Procedural maze demo.",
-   "",
-   "movement:",
+static const char *help[20] = {
    "y k u",
    "h * l",
    "b j n",
@@ -39,6 +36,7 @@ static const char *help[22] = {
    "i list inventory",
    "",
    "a apply (use)",
+   "e eat",
    "q quaff (drink)",
    "r read",
    "w wear",

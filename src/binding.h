@@ -5,12 +5,14 @@
 
 #define ACTION_NONE    0
 #define ACTION_APPLY   'a'
+#define ACTION_EAT     'e'
 #define ACTION_QUAFF   'q'
 #define ACTION_READ    'r'
 #define ACTION_WEAR    'w'
 #define ACTION_UNWEAR  'W'
 
 #define VERB_APPLY   "apply"
+#define VERB_EAT     "eat"
 #define VERB_QUAFF   "quaff"
 #define VERB_READ    "read"
 #define VERB_WEAR    "wear"
