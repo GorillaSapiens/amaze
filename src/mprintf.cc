@@ -4,7 +4,7 @@
 #include "mprintf.h"
 
 char *mprintf(const char *fmt, ...) {
-   char *buffer, *tmp;
+   char *buffer;
    int len;
 
    va_list ap;
@@ -24,7 +24,7 @@ char *mprintf(const char *fmt, ...) {
    }
 
    // Allocate (+1 for null terminator)
-   buffer = tmp = malloc(len + 1);
+   buffer = (char *) malloc(len + 1);
    if (!buffer)
    {
       va_end(ap_copy);

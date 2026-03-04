@@ -40,7 +40,7 @@ void sa_set(uint16_t y, uint16_t x) {
    }
 
    if (BIN == EMPTY_CHUNK) {
-      BIN = calloc(1, sizeof(Chunk));
+      BIN = (Chunk *) calloc(1, sizeof(Chunk));
    }
 
    BIN->BASE |= BIT;
@@ -61,7 +61,7 @@ void sa_clr(uint16_t y, uint16_t x) {
    }
 
    if (BIN == FULL_CHUNK) {
-      BIN = malloc(sizeof(Chunk));
+      BIN = (Chunk *) malloc(sizeof(Chunk));
       memset(BIN, 0xFF, sizeof(Chunk));
    }
 

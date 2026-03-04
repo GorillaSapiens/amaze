@@ -9,7 +9,7 @@ static char **queue = NULL;
 static int count = 0;
 
 int msg_printf(const char *fmt, ...) {
-   char *buffer, *tmp;
+   char *buffer;
    int len;
 
    va_list ap;
@@ -29,7 +29,7 @@ int msg_printf(const char *fmt, ...) {
    }
 
    // Allocate (+1 for null terminator)
-   buffer = tmp = malloc(len + 1);
+   buffer = (char *) malloc(len + 1);
    if (!buffer)
    {
       va_end(ap_copy);

@@ -34,7 +34,7 @@ Chooselist *cl_new(const char *prompt, void (*fn)(Object *obj, char tag)) {
 }
 
 void cl_add_obj(Chooselist *cl, Object *obj, char tag) {
-   cl->items = realloc(cl->items, sizeof(ChooselistItem) * (cl->count + 1));
+   cl->items = (ChooselistItem *) realloc(cl->items, sizeof(ChooselistItem) * (cl->count + 1));
    cl->items[cl->count].type = TYPE_OBJ;
    cl->items[cl->count].obj = obj;
    cl->items[cl->count].tag = tag;
@@ -42,7 +42,7 @@ void cl_add_obj(Chooselist *cl, Object *obj, char tag) {
 }
 
 void cl_add_text(Chooselist *cl, const char *text, char tag) {
-   cl->items = realloc(cl->items, sizeof(ChooselistItem) * (cl->count + 1));
+   cl->items = (ChooselistItem *) realloc(cl->items, sizeof(ChooselistItem) * (cl->count + 1));
    cl->items[cl->count].type = TYPE_TEXT;
    cl->items[cl->count].text = strdup(text);
    cl->items[cl->count].tag = tag;
