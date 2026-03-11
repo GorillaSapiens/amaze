@@ -184,6 +184,16 @@ void clear(void) {
    cprintf(COLOR_BRIGHT_WHITE, COLOR_BLACK, "\033[2J\033[H");
 }
 
+// set cursor to home
+void home(void) {
+   mvcurs(1,1);
+}
+
+// move cursor to x and y
+void mvcurs(int y, int x) {
+   printf("\033[%d;%dH", y, x);
+}
+
 // set stdin/stdout as unbuffered
 void unbuffer(void) {
    static struct termios oldt, newt;

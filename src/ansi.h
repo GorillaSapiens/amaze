@@ -46,6 +46,12 @@ int cprintf(unsigned char fg, unsigned char bg, const char *fmt, ...);
 // clear the screen
 void clear(void);
 
+// set cursor to home
+void home(void);
+
+// move cursor to x and y
+void mvcurs(int y, int x);
+
 // set stdin/stdout as unbuffered
 void unbuffer(void);
 
