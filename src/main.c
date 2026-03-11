@@ -796,6 +796,8 @@ int main(int argc, char **argv) {
 
    ansi_init();
 
+   clear();
+
    while (1) {
       clear();
       cprintf(COLOR_BLACK, COLOR_BRIGHT_CYAN,

@@ -9,7 +9,7 @@ static char **queue = NULL;
 static int count = 0;
 
 int msg_printf(const char *fmt, ...) {
-   char *buffer, *tmp;
+   char *buffer;
    int len;
 
    va_list ap;
@@ -22,22 +22,22 @@ int msg_printf(const char *fmt, ...) {
    len = vsnprintf(NULL, 0, fmt, ap);
    va_end(ap);
 
-   if (len <= 0)
+   if (len < 0)
    {
       va_end(ap_copy);
-      return 0;
+      return -1;
    }
 
    // Allocate (+1 for null terminator)
-   buffer = tmp = malloc(len + 1);
+   buffer = malloc((size_t) len + 1);
    if (!buffer)
    {
       va_end(ap_copy);
-      return 0;
+      return -1;
    }
 
    // Second pass: actually format
-   vsnprintf(buffer, len + 1, fmt, ap_copy);
+   vsnprintf(buffer, (size_t) len + 1, fmt, ap_copy);
    va_end(ap_copy);
 
    queue = (char **) realloc(queue, sizeof(char *) * (count + 1)); 

@@ -151,10 +151,10 @@ int cprintf(unsigned char fg, unsigned char bg, const char *fmt, ...) {
    len = vsnprintf(NULL, 0, fmt, ap);
    va_end(ap);
 
-   if (len <= 0)
+   if (len < 0)
    {
       va_end(ap_copy);
-      return 0;
+      return -1;
    }
 
    // Allocate (+1 for null terminator)
