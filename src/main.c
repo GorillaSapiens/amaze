@@ -413,17 +413,18 @@ static Map do_mem(int x, int y) {
 }
 
 // line drawing characters
+#define U_EMPTY 0x00B7
 static int linechars[16] = {
    // udlr
    0x25AA,  // 0000 // a square
-   0x2501,  // 0001
-   0x2501,  // 0010
+   0x257A,  // 0x2501,  // 0001
+   0x2578,  // 0x2501,  // 0010
    0x2501,  // 0011
-   0x2503,  // 0100
+   0x257B,  // 0x2503,  // 0100
    0x250F,  // 0101
    0x2513,  // 0110
    0x2533,  // 0111
-   0x2503,  // 1000
+   0x2579,  // 0x2503,  // 1000
    0x2517,  // 1001
    0x251B,  // 1010
    0x253B,  // 1011
@@ -846,7 +847,7 @@ int main(int argc, char **argv) {
                      sc_set(drawme.offset_y + sy, drawme.offset_x + sx, obj->unicode);
                   }
                   else {
-                     utf8printchar(COLOR_BRIGHT_WHITE, COLOR_BLACK, 0xB7);
+                     utf8printchar(COLOR_BLUE, COLOR_BLACK, U_EMPTY);
                   }
                }
             }
@@ -860,7 +861,7 @@ int main(int argc, char **argv) {
                      utf8printchar(COLOR_BLACK, COLOR_BRIGHT_BLACK, unicode);
                   }
                   else {
-                     utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, 0xB7);
+                     utf8printchar(COLOR_BRIGHT_BLACK, COLOR_BLACK, U_EMPTY);
                   }
                }
             }
