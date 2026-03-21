@@ -412,26 +412,24 @@ static Map do_mem(int x, int y) {
    return ret;
 }
 
-// line drawing characters
-#define U_EMPTY 0x00B7
 static int linechars[16] = {
    // udlr
-   0x25AA,  // 0000 // a square
-   0x257A,  // 0x2501,  // 0001
-   0x2578,  // 0x2501,  // 0010
-   0x2501,  // 0011
-   0x257B,  // 0x2503,  // 0100
-   0x250F,  // 0101
-   0x2513,  // 0110
-   0x2533,  // 0111
-   0x2579,  // 0x2503,  // 1000
-   0x2517,  // 1001
-   0x251B,  // 1010
-   0x253B,  // 1011
-   0x2503,  // 1100
-   0x2523,  // 1101
-   0x252B,  // 1110
-   0x254B,  // 1111
+   WALL_0000,
+   WALL_0001,
+   WALL_0010,
+   WALL_0011,
+   WALL_0100,
+   WALL_0101,
+   WALL_0110,
+   WALL_0111,
+   WALL_1000,
+   WALL_1001,
+   WALL_1010,
+   WALL_1011,
+   WALL_1100,
+   WALL_1101,
+   WALL_1110,
+   WALL_1111
 };
 
 static inline int sign(int x) {

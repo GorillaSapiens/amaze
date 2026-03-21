@@ -25,6 +25,27 @@
 #define COLOR_BRIGHT_CYAN    (ANSI_BRIGHT + COLOR_CYAN)
 #define COLOR_BRIGHT_WHITE   (ANSI_BRIGHT + COLOR_WHITE)
 
+#define U_EMPTY 0x00B7
+
+// line drawing characters
+//           udlr
+#define WALL_0000 0x25AA // a square
+#define WALL_0001 0x257A // 0x2501
+#define WALL_0010 0x2578 // 0x2501
+#define WALL_0011 0x2501
+#define WALL_0100 0x257B // 0x2503
+#define WALL_0101 0x250F
+#define WALL_0110 0x2513
+#define WALL_0111 0x2533
+#define WALL_1000 0x2579 // 0x2503
+#define WALL_1001 0x2517
+#define WALL_1010 0x251B
+#define WALL_1011 0x253B
+#define WALL_1100 0x2503
+#define WALL_1101 0x2523
+#define WALL_1110 0x252B
+#define WALL_1111 0x254B
+
 extern int screen_w;
 extern int screen_h;
 
