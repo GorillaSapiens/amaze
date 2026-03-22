@@ -46,6 +46,43 @@
 #define WALL_1110 0x252B
 #define WALL_1111 0x254B
 
+// line drawing characters
+//           abcd
+#define BLOCK_UH  0x2580
+#define BLOCK_LoH 0x2584
+#define BLOCK_RH  0x2590
+#define BLOCK_LeH 0x258C
+#define BLOCK_FUL 0x2588
+#define BLOCK_LL  0x2596
+#define BLOCK_LR  0x2597
+#define BLOCK_UL  0x2598
+#define BLOCK_UR  0x259D
+#define BLOCK_nLL 0x259C
+#define BLOCK_nLR 0x259B
+#define BLOCK_nUL 0x259F
+#define BLOCK_nUR 0x2599
+#define BLOCK_SL  0x259E
+#define BLOCK_nSL 0x259A
+
+#if 0
+#define GRAY_0000 0x0020
+#define GRAY_0001 0x2598
+#define GRAY_0010 0x259D
+#define GRAY_0011 0x2580
+#define GRAY_0100 0x2596
+#define GRAY_0101 0x25 B
+#define GRAY_0110 0x25 B
+#define GRAY_0111 0x25 B
+#define GRAY_1000 0x25 B
+#define GRAY_1001 0x25 B
+#define GRAY_1010 0x25 B
+#define GRAY_1011 0x25 B
+#define GRAY_1100 0x25 B
+#define GRAY_1101 0x25 B
+#define GRAY_1110 0x25 B
+#define GRAY_1111 0x25 B
+#endif
+
 extern int screen_w;
 extern int screen_h;
 

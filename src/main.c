@@ -477,6 +477,7 @@ static bool obscured(Map *mask, Map *in, int y, int x, int *count, Range **range
    return false;
 }
 
+// generate a mask map of what can be seen
 static Map do_sight(Map in) {
    int atx = SIZE / 2;
    int aty = SIZE / 2;
@@ -522,7 +523,7 @@ static Map do_sight(Map in) {
    return mask;
 }
 
-static Map do_walls(Map raw, Map mem) {
+static Map do_walls(Map raw, Map mem, Map seen) {
    Map ret;
    ret.offset_y = raw.offset_y;
    ret.offset_x = raw.offset_x;
@@ -540,6 +541,14 @@ static Map do_walls(Map raw, Map mem) {
 
             if (index == 0 && (i == 0 || i == (SIZE-1))) index |= 3;
             if (index == 0 && (j == 0 || j == (SIZE-1))) index |= 12;
+
+            // obscure edge case...
+            if (index == 0) {
+               if (j >  0       && seen.str[j-1][i] == 0) index |= 8; // up
+               if (j < (SIZE-1) && seen.str[j+1][i] == 0) index |= 4; // down
+               if (i >  0       && seen.str[j][i-1] == 0) index |= 2; // left
+               if (i < (SIZE-1) && seen.str[j][i+1] == 0) index |= 1; // right
+            }
 
             ret.str[j][i] = linechars[index];
          }
@@ -809,7 +818,7 @@ int main(int argc, char **argv) {
       Map raw    = do_raw(hero_x, hero_y);
       Map seen   = do_sight(raw);
       Map memory = do_mem(hero_x, hero_y);
-      Map drawme = do_walls(raw, memory);
+      Map drawme = do_walls(raw, memory, seen);
 
       if (show_raw) {
          memcpy(&drawme, &raw, sizeof(raw));
